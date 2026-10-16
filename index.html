@@ -4,10 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Уфа для своих — афиша</title>
-    
-    <!-- Погода: стили виджета -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/openmeteo-weather-widget@0.0.2/dist/style.css">
-    
     <style>
         :root {
             --bg: #0a0a0a;
@@ -43,13 +39,8 @@
         }
         h1 { font-size: 2rem; font-weight: 800; letter-spacing: -1px; }
         h1 span { color: var(--accent); }
-        
-        /* Погода в шапке */
-        #weather {
-            min-width: 280px;
-            max-width: 340px;
-        }
-        
+        #count { color: var(--muted); font-size: 0.9rem; font-weight: 500; }
+
         .search-wrap { margin-bottom: 20px; position: relative; }
         .search-wrap input {
             width: 100%;
@@ -166,7 +157,6 @@
             pointer-events: auto;
         }
 
-        /* ─── Сайдбар: слева картинка на всю высоту, справа текст ─── */
         .sidebar-inner {
             width: 100%;
             height: 100%;
@@ -240,7 +230,7 @@
         .sidebar.active .card-3d-hint { opacity: 1; }
         .card-3d-wrap.touched .card-3d-hint { opacity: 0; }
 
-        /* Правая часть: статичный текст */
+        /* Правая часть: текст */
         .card-info {
             flex: 1;
             display: flex;
@@ -400,7 +390,6 @@
             .card-info { border-left: none; border-top: 1px solid var(--border); }
             .card-info-title { font-size: 1.15rem; }
             h1 { font-size: 1.5rem; }
-            #weather { min-width: 100%; }
             .grid { grid-template-columns: 1fr; }
             .filters button { padding: 8px 14px; font-size: 0.85rem; }
         }
@@ -409,7 +398,7 @@
 <body>
     <header>
         <h1>Уфа <span>для своих</span></h1>
-        <div id="weather"></div>
+        <div id="count"></div>
     </header>
 
     <div class="search-wrap">
@@ -431,12 +420,10 @@
 
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-inner">
-            <!-- Левая часть: 3D-карточка с картинкой на всю высоту -->
             <div class="card-3d-wrap" id="card-3d-wrap">
                 <div class="card-3d" id="card-3d"></div>
                 <div class="card-3d-hint">👆 Поверни карточку</div>
             </div>
-            <!-- Правая часть: текст -->
             <div class="card-info">
                 <div class="card-info-header">
                     <h2>Событие</h2>
@@ -447,45 +434,7 @@
         </div>
     </aside>
 
-    <!-- Погода: скрипт виджета -->
-    <script src="https://cdn.jsdelivr.net/npm/openmeteo-weather-widget@0.0.2/dist/weather-widget.umd.js"></script>
-    
-    <!-- Сезонный эффект: снег -->
-    <script src="https://cdn.jsdelivr.net/npm/seasonalfx@0.1.0/dist/index.umd.min.js"></script>
-
     <script>
-        // ─── Погода Уфы ───
-        document.addEventListener('DOMContentLoaded', () => {
-            const weatherWidget = new WeatherWidget({
-                locations: [
-                    { lat: 54.7388, lon: 55.9721, name: "Уфа" }
-                ],
-                activeLocationIndex: 0,
-                layout: "compact",
-                theme: "dark",
-                units: "metric",
-                modules: {
-                    current: true,
-                    details: { enabled: true, fields: ["feelsLike", "humidity", "wind"] }
-                },
-                refreshMinutes: 30
-            });
-            weatherWidget.mount("#weather");
-        });
-
-        // ─── Сезонный эффект: осенние листья ───
-        document.addEventListener('DOMContentLoaded', () => {
-            if (window.SeasonalFX) {
-                const fx = new SeasonalFX.SeasonalFX({
-                    target: document.body,
-                    season: 'autumn',
-                    intensity: 'subtle'
-                });
-                fx.start();
-            }
-        });
-
-        // ─── Логика сайта ───
         let allEvents = [];
         let currentFilter = 'all';
         let searchQuery = '';
@@ -493,11 +442,12 @@
         async function load() {
             try {
                 const res = await fetch('events.json?t=' + Date.now());
+                if (!res.ok) throw new Error('HTTP ' + res.status);
                 allEvents = await res.json();
                 render();
             } catch (err) {
                 document.getElementById('feed').innerHTML =
-                    '<div class="empty">Ошибка загрузки данных.</div>';
+                    '<div class="empty">Ошибка загрузки данных. Проверь events.json.</div>';
                 console.error(err);
             }
         }
@@ -668,7 +618,6 @@
             resetRotation();
         }
 
-        // ─── 3D-поворот картинки ───
         const card3d = document.getElementById('card-3d');
         const card3dWrap = document.getElementById('card-3d-wrap');
         let rotX = 0, rotY = 0;
