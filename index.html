@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Уфа: куда пойти</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #111; color: #eee; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { font-weight: 800; letter-spacing: -1px; }
+        .filters { display: flex; gap: 10px; margin-bottom: 20px; }
+        .filters button { background: #222; color: #aaa; border: 1px solid #333; padding: 8px 16px; border-radius: 20px; cursor: pointer; }
+        .filters button.active { background: #fff; color: #000; border-color: #fff; }
+        .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 12px; padding: 20px; margin-bottom: 15px; }
+        .card h3 { margin: 0 0 8px 0; }
+        .card p { margin: 4px 0; color: #aaa; font-size: 0.9em; }
+        .price { color: #6ee7b7; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>Уфа для своих</h1>
+    <div class="filters">
+        <button onclick="filter('all')" class="active">Все</button>
+        <button onclick="filter('free')">Бесплатно</button>
+        <button onclick="filter('party')">Тусовки</button>
+    </div>
+    <div id="feed"></div>
+
+    <script>
+        let allEvents = [];
+
+        async function load() {
+            const res = await fetch('events.json');
+            allEvents = await res.json();
+            render(allEvents);
+        }
+
+        function render(events) {
+            const feed = document.getElementById('feed');
+            feed.innerHTML = events.map(e => `
+                <div class="card">
+                    <h3>${e.title}</h3>
+                    <p>${e.date} · ${e.place}</p>
+                    <p class="price">${e.price}</p>
+                </div>
+            `).join('');
+        }
+
+        function filter(type) {
+            // Меняем активную кнопку
+            document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+
+            if (type === 'all') render(allEvents);
+            if (type === 'free') render(allEvents.filter(e => e.price === 'бесплатно'));
+            if (type === 'party') render(allEvents.filter(e => e.category.includes('вечеринка')));
+        }
+
+        load();
+    </script>
+</body>
+</html>
