@@ -185,7 +185,6 @@
             }
 
             feed.innerHTML = filtered.map(e => {
-                // Если картинки нет — ставим заглушку с градиентом
                 const img = e.image 
                     ? `style="background-image: url('${e.image}')"` 
                     : `style="background: linear-gradient(135deg, #1f1f1f, #2a2a2a)"`;
