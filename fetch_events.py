@@ -1,912 +1,422 @@
-<!DOCTYPE html>
-<html lang="ru" data-theme="dark">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Уфа для своих — афиша</title>
-    <style>
-        :root[data-theme="dark"] {
-            --bg: #0a0a0a; --card: #141414; --border: #262626;
-            --text: #f5f5f5; --muted: #a3a3a3; --accent: #c4ff4d; --accent-contrast: #000;
-        }
-        :root[data-theme="light"] {
-            --bg: #f5f5f7; --card: #ffffff; --border: #e5e5ea;
-            --text: #1d1d1f; --muted: #6e6e73; --accent: #007aff; --accent-contrast: #ffffff;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg); color: var(--text); line-height: 1.5;
-            padding: 20px; padding-bottom: 80px; max-width: 1200px; margin: 0 auto;
-            -webkit-font-smoothing: antialiased; overflow-x: hidden;
-            transition: background 0.3s, color 0.3s;
-        }
-        header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 24px; padding-bottom: 16px;
-            border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 12px;
-        }
-        h1 { font-size: 2rem; font-weight: 800; letter-spacing: -1px; }
-        h1 span { color: var(--accent); }
-        .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-        .theme-toggle {
-            background: var(--card); border: 1px solid var(--border);
-            border-radius: 12px; width: 42px; height: 42px; cursor: pointer;
-            font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s; color: var(--text);
-        }
-        .theme-toggle:hover { border-color: var(--accent); }
-        .weather-block {
-            display: flex; gap: 8px; background: var(--card);
-            border: 1px solid var(--border); border-radius: 14px;
-            padding: 8px 12px; font-size: 0.9rem;
-        }
-        .weather-item {
-            display: flex; flex-direction: column; align-items: center; gap: 2px;
-            padding: 0 8px; border-right: 1px solid var(--border); min-width: 60px;
-        }
-        .weather-item:last-child { border-right: none; }
-        .weather-label { font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
-        .weather-icon { font-size: 1.2rem; line-height: 1; }
-        .weather-temp { font-size: 0.9rem; font-weight: 800; color: var(--accent); }
-        #count { color: var(--muted); font-size: 0.9rem; font-weight: 500; }
-        .ai-search {
-            background: linear-gradient(135deg, rgba(196, 255, 77, 0.08) 0%, rgba(196, 255, 77, 0.02) 100%);
-            border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 24px;
-        }
-        :root[data-theme="light"] .ai-search {
-            background: linear-gradient(135deg, rgba(0, 122, 255, 0.08) 0%, rgba(0, 122, 255, 0.02) 100%);
-        }
-        .ai-search-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-        .ai-search-header .icon { font-size: 1.4rem; }
-        .ai-search-header h2 { font-size: 1rem; font-weight: 700; color: var(--accent); }
-        .ai-search-header .status { font-size: 0.75rem; color: var(--muted); margin-left: auto; }
-        .ai-search input {
-            width: 100%; background: var(--card); border: 1px solid var(--border);
-            border-radius: 14px; padding: 14px 18px; color: var(--text);
-            font-size: 1rem; outline: none; transition: border-color 0.2s;
-        }
-        .ai-search input:focus { border-color: var(--accent); }
-        .ai-search input::placeholder { color: var(--muted); }
-        .ai-search input:disabled { opacity: 0.5; cursor: not-allowed; }
-        .search-wrap { margin-bottom: 20px; position: relative; }
-        .search-wrap input {
-            width: 100%; background: var(--card); border: 1px solid var(--border);
-            border-radius: 14px; padding: 14px 18px 14px 44px; color: var(--text);
-            font-size: 1rem; outline: none; transition: border-color 0.2s;
-        }
-        .search-wrap input:focus { border-color: var(--accent); }
-        .search-wrap::before {
-            content: '🔍'; position: absolute; left: 16px; top: 50%;
-            transform: translateY(-50%); font-size: 1rem; opacity: 0.6;
-        }
-        .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-        .filters button {
-            background: var(--card); color: var(--muted);
-            border: 1px solid var(--border); padding: 8px 16px;
-            border-radius: 100px; cursor: pointer; font-size: 0.85rem;
-            transition: all 0.2s; font-weight: 500;
-        }
-        .filters button:hover { border-color: var(--accent); color: var(--text); }
-        .filters button.active {
-            background: var(--accent); color: var(--accent-contrast);
-            border-color: var(--accent); font-weight: 700;
-        }
-        .filters-label {
-            font-size: 0.7rem; color: var(--muted); text-transform: uppercase;
-            letter-spacing: 1px; font-weight: 600; margin-bottom: 6px; margin-top: 8px;
-        }
-        .grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 20px;
-        }
-        .card {
-            background: var(--card); border: 1px solid var(--border);
-            border-radius: 20px; overflow: hidden;
-            transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
-            display: flex; flex-direction: column; cursor: pointer;
-        }
-        .card:hover {
-            transform: translateY(-4px); border-color: var(--accent);
-            box-shadow: 0 12px 40px rgba(0, 122, 255, 0.08);
-        }
-        .card-image {
-            width: 100%; aspect-ratio: 4/3; background: var(--border);
-            background-size: cover; background-position: center; position: relative;
-        }
-        .card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
-        .card-tag {
-            display: inline-block; font-size: 0.7rem; text-transform: uppercase;
-            letter-spacing: 1px; color: var(--accent); margin-bottom: 8px; font-weight: 700;
-        }
-        .card h3 {
-            font-size: 1.05rem; margin-bottom: 10px; line-height: 1.35; font-weight: 700;
-            display: -webkit-box; -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical; overflow: hidden;
-        }
-        .card-meta {
-            font-size: 0.85rem; color: var(--muted);
-            margin-bottom: 5px; display: flex; align-items: center; gap: 6px;
-        }
-        .card-price {
-            margin-top: auto; padding-top: 12px;
-            font-weight: 800; font-size: 1rem;
-        }
-        .card-price.free { color: var(--accent); }
-        .card-score {
-            font-size: 0.75rem; color: var(--accent);
-            margin-top: 6px; font-weight: 600;
-        }
-        .overlay {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
-            opacity: 0; pointer-events: none; transition: opacity 0.3s;
-            z-index: 998; backdrop-filter: blur(8px);
-        }
-        .overlay.active { opacity: 1; pointer-events: auto; }
-        .global-loader {
-            position: fixed; inset: 0; background: var(--bg); z-index: 10000;
-            display: flex; align-items: center; justify-content: center;
-            transition: opacity 0.6s ease;
-        }
-        .global-loader.hidden { opacity: 0; pointer-events: none; }
-        .global-loader-content {
-            display: flex; flex-direction: column; align-items: center; gap: 16px;
-        }
-        .global-loader-text { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
-        .global-loader-sub { font-size: 0.85rem; color: var(--muted); }
-        .spinner {
-            width: 44px; height: 44px;
-            border: 4px solid rgba(196, 255, 77, 0.2);
-            border-top-color: var(--accent); border-radius: 50%;
-            animation: spin 0.9s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .sidebar {
-            position: fixed; inset: 0; width: 100vw; height: 100vh;
-            z-index: 999; transform: translateX(-100%);
-            transition: transform 0.45s cubic-bezier(0.34, 1.3, 0.64, 1);
-            pointer-events: none; background: var(--bg);
-        }
-        .sidebar.active { transform: translateX(0); pointer-events: auto; }
-        .sidebar-inner { width: 100%; height: 100%; display: flex; flex-direction: row; }
-        .sidebar-inner.no-image .card-3d-wrap { display: none; }
-        .sidebar-inner.no-image .card-info { border-left: none; }
-        .card-3d-wrap {
-            flex: 0 0 50%; display: flex; align-items: center; justify-content: center;
-            padding: 20px; background: var(--bg); perspective: 1500px;
-            overflow: hidden; height: 100vh; position: relative;
-        }
-        .card-3d {
-            width: 100%; height: 100%; border-radius: 16px; background: var(--card);
-            display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.4), 0 0 0 1px var(--border) inset;
-            transform-style: preserve-3d; transition: transform 0.1s ease-out;
-            cursor: grab; position: relative; overflow: hidden;
-        }
-        .card-3d:active { cursor: grabbing; }
-        .card-3d img {
-            max-width: 100%; max-height: 100%; width: auto; height: auto;
-            object-fit: contain; display: block; user-select: none;
-            -webkit-user-drag: none; pointer-events: none;
-        }
-        .card-3d::after {
-            content: ''; position: absolute; inset: 0; border-radius: 16px;
-            background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 50%);
-            pointer-events: none;
-        }
-        .card-3d-hint {
-            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            background: rgba(0,0,0,0.7); color: #fff; font-size: 0.75rem;
-            padding: 6px 14px; border-radius: 100px; pointer-events: none;
-            transition: opacity 0.4s; opacity: 0; white-space: nowrap;
-        }
-        .sidebar.active .card-3d-hint { opacity: 1; }
-        .card-3d-wrap.touched .card-3d-hint { opacity: 0; }
-        .card-3d-loading {
-            position: absolute; inset: 0; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; gap: 14px;
-            background: var(--card); color: var(--muted); font-size: 0.9rem; z-index: 2;
-        }
-        .card-3d-loading.hidden { display: none; }
-        .card-info {
-            flex: 1; display: flex; flex-direction: column; overflow: hidden;
-            border-left: 1px solid var(--border); background: var(--bg);
-            height: 100vh; position: relative;
-        }
-        .card-info-header {
-            display: flex; justify-content: space-between; align-items: center;
-            padding: 18px 28px; border-bottom: 1px solid var(--border); flex-shrink: 0;
-        }
-        .card-info-header h2 {
-            font-size: 0.85rem; font-weight: 700; color: var(--muted);
-            text-transform: uppercase; letter-spacing: 1.5px;
-        }
-        .card-info-close {
-            background: var(--card); border: 1px solid var(--border);
-            color: var(--text); font-size: 1.4rem; width: 42px; height: 42px;
-            border-radius: 50%; cursor: pointer;
-            display: flex; align-items: center; justify-content: center;
-            transition: background 0.2s; line-height: 1; flex-shrink: 0;
-        }
-        .card-info-close:hover { background: var(--border); }
-        .card-info-scroll {
-            flex: 1; overflow-y: auto; padding: 32px 28px;
-            scrollbar-width: thin; scrollbar-color: var(--border) transparent;
-        }
-        .card-info-scroll::-webkit-scrollbar { width: 8px; }
-        .card-info-scroll::-webkit-scrollbar-track { background: transparent; }
-        .card-info-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-        .card-info-loading {
-            position: absolute; inset: 0; top: 63px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            gap: 14px; background: var(--bg); color: var(--muted);
-            font-size: 0.9rem; z-index: 2;
-        }
-        .card-info-loading.hidden { display: none; }
-        .card-info-tag {
-            display: inline-block; font-size: 0.75rem; text-transform: uppercase;
-            letter-spacing: 1px; color: var(--accent); margin-bottom: 12px; font-weight: 700;
-            padding: 4px 10px; background: var(--card);
-            border: 1px solid var(--border); border-radius: 6px;
-        }
-        .card-info-title {
-            font-size: 1.8rem; font-weight: 800; line-height: 1.3;
-            margin-bottom: 24px; letter-spacing: -0.5px;
-        }
-        .card-info-meta {
-            display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;
-            padding: 20px; background: var(--card);
-            border-radius: 14px; border: 1px solid var(--border);
-        }
-        .card-info-meta-item {
-            display: flex; align-items: flex-start; gap: 12px; font-size: 1rem;
-        }
-        .card-info-meta-item .icon {
-            font-size: 1.2rem; flex-shrink: 0; width: 28px; text-align: center;
-        }
-        .card-info-meta-item .label {
-            color: var(--muted); font-size: 0.75rem;
-            text-transform: uppercase; letter-spacing: 0.5px;
-            font-weight: 600; margin-bottom: 2px;
-        }
-        .card-info-meta-item .value { color: var(--text); font-weight: 500; }
-        .card-info-meta-item .value.price-free { color: var(--accent); font-weight: 700; }
-        .card-info-text {
-            font-size: 1.05rem; line-height: 1.8; color: var(--text);
-            white-space: pre-wrap; word-wrap: break-word; margin-bottom: 24px;
-            padding: 20px; background: var(--card);
-            border-radius: 14px; border: 1px solid var(--border); opacity: 0.9;
-        }
-        .card-info-actions { display: flex; flex-direction: column; gap: 10px; }
-        .card-info-btn {
-            display: flex; align-items: center; justify-content: center; gap: 10px;
-            padding: 16px 24px; border-radius: 14px; font-size: 1rem;
-            font-weight: 700; text-decoration: none; cursor: pointer;
-            border: none; transition: all 0.2s;
-        }
-        .card-info-btn.primary { background: var(--accent); color: var(--accent-contrast); }
-        .card-info-btn.primary:hover { opacity: 0.85; transform: translateY(-2px); }
-        .card-info-btn.secondary {
-            background: var(--card); color: var(--text); border: 1px solid var(--border);
-        }
-        .card-info-btn.secondary:hover { background: var(--border); }
-        .empty { text-align: center; padding: 80px 20px; color: var(--muted); grid-column: 1/-1; }
-        .toast {
-            position: fixed; bottom: 30px; left: 50%;
-            transform: translateX(-50%) translateY(80px);
-            background: var(--accent); color: var(--accent-contrast);
-            padding: 12px 24px; border-radius: 100px;
-            font-weight: 700; font-size: 0.9rem; z-index: 10001;
-            transition: transform 0.3s ease; pointer-events: none;
-        }
-        .toast.show { transform: translateX(-50%) translateY(0); }
-        @media (max-width: 800px) {
-            .sidebar-inner { flex-direction: column; }
-            .card-3d-wrap { flex: 0 0 45%; height: 45vh; padding: 10px; }
-            .card-3d { border-radius: 12px; }
-            .card-info { height: 55vh; border-left: none; border-top: 1px solid var(--border); }
-            .card-info-loading { top: 55px; }
-            .card-info-title { font-size: 1.3rem; }
-            .card-info-scroll { padding: 20px; }
-            h1 { font-size: 1.5rem; }
-            .weather-block { padding: 6px 8px; font-size: 0.8rem; }
-            .weather-item { min-width: 50px; padding: 0 5px; }
-            .weather-icon { font-size: 1rem; }
-            .weather-temp { font-size: 0.85rem; }
-            .grid { grid-template-columns: 1fr; }
-            .filters button { padding: 6px 12px; font-size: 0.8rem; }
-        }
-    </style>
-</head>
-<body>
-    <div id="global-loader" class="global-loader">
-        <div class="global-loader-content">
-            <div class="spinner"></div>
-            <div class="global-loader-text">Загрузка сайта...</div>
-            <div class="global-loader-sub" id="global-loader-sub">Подготовка умного поиска</div>
-        </div>
-    </div>
+# -*- coding: utf-8 -*-
+"""
+Ufa Afisha — с фильтром прошедших событий и строгим отбором анонсов
+"""
 
-    <header>
-        <h1>Уфа <span>для своих</span></h1>
-        <div class="header-actions">
-            <div class="weather-block" id="weather-block">
-                <div class="weather-item">
-                    <span class="weather-label">Сейчас</span>
-                    <span class="weather-icon" id="w-now-icon">—</span>
-                    <span class="weather-temp" id="w-now-temp">—</span>
-                </div>
-                <div class="weather-item">
-                    <span class="weather-label">Вечер</span>
-                    <span class="weather-icon" id="w-eve-icon">—</span>
-                    <span class="weather-temp" id="w-eve-temp">—</span>
-                </div>
-                <div class="weather-item">
-                    <span class="weather-label">Завтра</span>
-                    <span class="weather-icon" id="w-tmr-icon">—</span>
-                    <span class="weather-temp" id="w-tmr-temp">—</span>
-                </div>
-            </div>
-            <button class="theme-toggle" id="theme-toggle" title="Сменить тему">🌙</button>
-        </div>
-    </header>
+import os, re, json, logging, hashlib
+from dataclasses import dataclass, asdict
+from typing import List, Optional, Tuple
+from datetime import datetime, timedelta
+from pathlib import Path
 
-    <div class="ai-search">
-        <div class="ai-search-header">
-            <span class="icon">🤖</span>
-            <h2>Спроси меня о событиях</h2>
-            <span class="status" id="ai-status">Загрузка модели...</span>
-        </div>
-        <input type="text" id="ai-query" placeholder="Например: хочу что-то атмосферное и недорогое..." disabled>
-    </div>
+import pytz, requests
+from bs4 import BeautifulSoup
 
-    <div class="search-wrap">
-        <input type="text" id="search" placeholder="Поиск по словам...">
-    </div>
+CITY = "Уфа"
+TZ = pytz.timezone("Asia/Yekaterinburg")
+DATA_DIR = Path("data")
+IMAGES_DIR = DATA_DIR / "images"
+IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
-    <div class="filters-label">Когда</div>
-    <div class="filters" id="date-filters">
-        <button data-date="all" class="active">Все</button>
-        <button data-date="today">Сегодня</button>
-        <button data-date="tomorrow">Завтра</button>
-        <button data-date="weekend">Выходные</button>
-        <button data-date="week">Неделя</button>
-    </div>
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/124 Safari/537.36"
+}
 
-    <div class="filters-label">Категория</div>
-    <div class="filters" id="category-filters">
-        <button data-category="all" class="active">Все</button>
-        <button data-category="concert">🎵 Музыка</button>
-        <button data-category="party">🎉 Вечеринки</button>
-        <button data-category="cinema">🎬 Кино</button>
-        <button data-category="theater">🎭 Театр</button>
-        <button data-category="lecture">📚 Лекции</button>
-        <button data-category="exhibition">🖼️ Выставки</button>
-        <button data-category="market">🛍️ Маркеты</button>
-        <button data-category="festival">🎪 Фестивали</button>
-        <button data-category="standup">🎤 Стендап</button>
-        <button data-category="free">💸 Бесплатно</button>
-    </div>
+EVENT_KEYWORDS = [
+    "кино","фильм","кинопоказ","концерт","джаз","оркестр","джем","dj","вечеринк","рейв",
+    "лектор","лекци","семинар","мастер-класс","воркшоп","театр","спектакл","перформанс",
+    "выставк","галере","музей","арт","экскурс","киноклуб","фестиваль","маркет","стендап",
+    "квиз","премьера","открытие","тренинг"
+]
+EVENT_RE = re.compile("|".join(EVENT_KEYWORDS), re.I)
 
-    <div id="count" style="text-align:center;margin-bottom:16px;"></div>
+CATEGORIES = {
+    "concert": ["концерт","джаз","оркестр","джем","dj","выступлен","группа","певец","певица","бэнд"],
+    "party": ["вечеринк","рейв","дискотек","пати","afterparty","афтепати"],
+    "cinema": ["кино","фильм","кинопоказ","премьера","киноклуб","кинофестиваль"],
+    "theater": ["театр","спектакл","перформанс","драма","комедия","мюзикл"],
+    "lecture": ["лекци","семинар","воркшоп","мастер-класс","тренинг","встреча с","дискуссия"],
+    "exhibition": ["выставк","галере","музей","экспозиц","экскурс","вернисаж"],
+    "market": ["маркет","ярмарк","фуд-маркет","фудмаркет"],
+    "festival": ["фестиваль","фест"],
+    "standup": ["стендап","комик","юмор"],
+    "quiz": ["квиз","викторин","интеллектуальн"]
+}
 
-    <div id="feed" class="grid"></div>
+DATE_TOKENS = r"(?:\b\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?|\b\d{1,2}\s+(?:янв|фев|мар|апр|мая|июн|июл|авг|сен|окт|ноя|дек|января|февраля|марта|апреля|июня|июля|августа|сентября|октября|ноября|декабря)\b)"
+TIME_TOKENS = r"(?:\b[01]?\d|2[0-3])[:.]\d{2}"
 
-    <div class="overlay" id="overlay"></div>
+MONTHS = {
+    "янв":1,"января":1,"фев":2,"февраля":2,"мар":3,"марта":3,"апр":4,"апреля":4,
+    "мая":5,"май":5,"июн":6,"июня":6,"июл":7,"июля":7,"авг":8,"августа":8,
+    "сен":9,"сентября":9,"окт":10,"октября":10,"ноя":11,"ноября":11,"дек":12,"декабря":12
+}
 
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-inner" id="sidebar-inner">
-            <div class="card-3d-wrap" id="card-3d-wrap">
-                <div class="card-3d" id="card-3d">
-                    <div class="card-3d-loading" id="card-3d-loading">
-                        <div class="spinner"></div>
-                        <span>Загрузка картинки...</span>
-                    </div>
-                </div>
-                <div class="card-3d-hint">👆 Поверни карточку</div>
-            </div>
-            <div class="card-info">
-                <div class="card-info-header">
-                    <h2>Событие</h2>
-                    <button class="card-info-close" id="sidebar-close">×</button>
-                </div>
-                <div class="card-info-scroll" id="card-info-content"></div>
-                <div class="card-info-loading" id="card-info-loading">
-                    <div class="spinner"></div>
-                    <span>Загрузка события...</span>
-                </div>
-            </div>
-        </div>
-    </aside>
+VENUE_HINTS = [
+    "Арт-Квадрат", "Арт Квадрат", "Арт-КВАДРАТ", "Zaman", "Мирас", "Клуб Мечты",
+    "Мама варит кофе", "Стерх", "Джаз-клуб", "Бар Муви", "Movie", "Vinoteka", "Даско",
+    "Огни Уфы", "Гостиный двор", "Конгресс-холл", "Торатау", "Башкирия", "Neft",
+    "Особняк", "Артерия", "Юкси Парк", "Мегаполис", "Пятница", "Правда",
+    "Уфа-Арена", "Синема Парк", "Галерея Арт", "ЦКиНТ", "ДК Ядкарь",
+    "Биатлонка", "Соты", "Тинькофф", "Сбер", "Амадеус", "Гастробар", "Лофт",
+    "Кэмп", "Camp", "Кэмп", "Monkey Grinder", "Шкапских", "Мира", "Монумент",
+]
 
-    <div class="toast" id="toast">Ссылка скопирована</div>
+# Посты, которые НЕ являются анонсами (даже если есть ключевые слова)
+NON_EVENT_MARKERS = [
+    "реклама", "erid", "ооо", "инн", "подпишись", "подписывайтесь",
+    "розыгрыш", "конкурс", "приз", "giveaway",
+    "итоги", "результаты", "запись эфира", "смотрите на",
+    "фотоотчёт", "фотоотчет", "как это было",
+    "спасибо всем", "благодарим",
+]
 
-    <script type="module">
-        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2';
-        env.allowLocalModels = false;
+def load_json_file(filename: str, default):
+    path = Path(filename)
+    if path.exists():
+        return json.loads(path.read_text("utf-8"))
+    return default
 
-        let extractor = null;
-        let eventEmbeddings = [];
-        let allEvents = [];
-        let aiReady = false;
+def detect_category(text: str) -> str:
+    low = (text or "").lower()
+    scores = {}
+    for cat, keywords in CATEGORIES.items():
+        score = sum(1 for kw in keywords if kw in low)
+        if score > 0:
+            scores[cat] = score
+    if not scores:
+        return "other"
+    return max(scores, key=scores.get)
 
-        const globalLoader = document.getElementById('global-loader');
-        const globalLoaderSub = document.getElementById('global-loader-sub');
+def should_exclude(text: str, rules: dict) -> bool:
+    low = (text or "").lower()
+    if any(w.lower() in low for w in rules.get("hard_exclude_words", [])):
+        return True
+    if any(w.lower() in low for w in NON_EVENT_MARKERS):
+        return True
+    return False
 
-        // ─── Тема ───
-        function setTheme(theme) {
-            document.documentElement.setAttribute('data-theme', theme);
-            localStorage.setItem('theme', theme);
-            const btn = document.getElementById('theme-toggle');
-            if (btn) btn.textContent = theme === 'dark' ? '🌙' : '☀️';
-        }
-        function initTheme() {
-            const saved = localStorage.getItem('theme');
-            if (saved) { setTheme(saved); return; }
-            const prefersLight = window.matchMedia('(prefers-color-scheme: light)').matches;
-            setTheme(prefersLight ? 'light' : 'dark');
-        }
-        initTheme();
-        document.getElementById('theme-toggle').addEventListener('click', () => {
-            const current = document.documentElement.getAttribute('data-theme');
-            setTheme(current === 'dark' ? 'light' : 'dark');
-        });
+def clean_title(title: str, rules: dict) -> str:
+    for prefix in rules.get("title_prefixes_remove", []):
+        title = re.sub(rf"^{re.escape(prefix)}\s*[:,—-]?\s*", "", title, flags=re.I)
+    return title.strip()
 
-        // ─── Погода ───
-        async function loadWeather() {
-            const setW = (id, icon, temp) => {
-                const el = document.getElementById(id);
-                if (el) el.textContent = icon;
-                const t = document.getElementById(id.replace('icon', 'temp'));
-                if (t) t.textContent = temp;
-            };
-            const iconMap = {
-                0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️', 45: '🌫️', 48: '🌫️',
-                51: '🌦️', 53: '🌦️', 55: '🌦️', 61: '🌧️', 63: '🌧️', 65: '🌧️',
-                71: '🌨️', 73: '🌨️', 75: '🌨️', 80: '🌧️', 81: '🌧️', 82: '🌧️',
-                95: '⛈️', 96: '⛈️', 99: '⛈️',
-            };
-            try {
-                const res = await fetch(
-                    'https://api.open-meteo.com/v1/forecast?latitude=54.7388&longitude=55.9721&hourly=temperature_2m,weather_code&current=temperature_2m,weather_code&forecast_days=2&timezone=Asia%2FYekaterinburg',
-                    { signal: AbortSignal.timeout(8000) }
-                );
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                const data = await res.json();
-                setW('w-now-icon', iconMap[data.current.weather_code] || '🌡️', Math.round(data.current.temperature_2m) + '°');
+def normalize_venue(venue: Optional[str], rules: dict) -> Optional[str]:
+    if not venue: return None
+    low_venue = venue.lower().strip()
+    for bad_name, good_name in rules.get("venue_synonyms", {}).items():
+        if bad_name.lower() in low_venue:
+            return good_name
+    return venue
 
-                const times = data.hourly.time;
-                const temps = data.hourly.temperature_2m;
-                const codes = data.hourly.weather_code;
-                const today = new Date().toISOString().slice(0, 10);
-                const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+@dataclass
+class Event:
+    title: str
+    desc: Optional[str]
+    start: Optional[str]
+    date_text: Optional[str]
+    time_text: Optional[str]
+    city: str
+    venue: Optional[str]
+    price: Optional[str]
+    source: str
+    source_link: str
+    posted_at: Optional[str]
+    raw: str
+    image: Optional[str] = None
+    kind: str = "other"
+    category: str = "other"
 
-                let eveIdx = times.findIndex(t => t === `${today}T18:00`);
-                if (eveIdx < 0) eveIdx = times.findIndex(t => t === `${today}T17:00`);
-                let tmrIdx = times.findIndex(t => t === `${tomorrow}T12:00`);
+def norm(s: str) -> str:
+    return re.sub(r"\s+", " ", (s or "").replace("\xa0", " ")).strip()
 
-                if (eveIdx >= 0) setW('w-eve-icon', iconMap[codes[eveIdx]] || '🌡️', Math.round(temps[eveIdx]) + '°');
-                else setW('w-eve-icon', '—', '—');
-                if (tmrIdx >= 0) setW('w-tmr-icon', iconMap[codes[tmrIdx]] || '🌡️', Math.round(temps[tmrIdx]) + '°');
-                else setW('w-tmr-icon', '—', '—');
-                return;
-            } catch (err) { console.warn('Open-Meteo failed:', err); }
-            try {
-                const res = await fetch('https://wttr.in/Ufa?format=j1', { signal: AbortSignal.timeout(8000) });
-                const data = await res.json();
-                setW('w-now-icon', '🌡️', data.current_condition[0].temp_C + '°');
-            } catch (err) { console.error('Weather failed:', err); }
-        }
-        loadWeather();
-        setInterval(loadWeather, 30 * 60 * 1000);
+def sentence_case(s: str) -> str:
+    return s[:1].upper() + s[1:] if s else s
 
-        // ─── AI ───
-        async function initAI() {
-            const statusEl = document.getElementById('ai-status');
-            const inputEl = document.getElementById('ai-query');
-            if (!statusEl || !inputEl) return;
-            try {
-                statusEl.textContent = 'Загрузка модели (33 МБ)...';
-                if (globalLoaderSub) globalLoaderSub.textContent = 'Загрузка AI-модели...';
-                extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { dtype: 'q8' });
-                statusEl.textContent = 'Индексация событий...';
-                if (globalLoaderSub) globalLoaderSub.textContent = 'Индексация событий...';
-                await indexEvents();
-                statusEl.textContent = 'Готово! Спрашивай.';
-                inputEl.disabled = false;
-                aiReady = true;
-                if (globalLoader) globalLoader.classList.add('hidden');
-            } catch (err) {
-                console.error('AI init error:', err);
-                statusEl.textContent = 'AI недоступен';
-                if (globalLoader) globalLoader.classList.add('hidden');
-            }
-        }
-        async function indexEvents() {
-            if (!extractor || allEvents.length === 0) return;
-            eventEmbeddings = [];
-            for (const event of allEvents) {
-                const text = `${event.title || ''} ${event.desc || ''} ${event.venue || ''}`.trim();
-                if (!text) { eventEmbeddings.push(null); continue; }
-                try {
-                    const output = await extractor(text, { pooling: 'mean', normalize: true });
-                    eventEmbeddings.push(Array.from(output.data));
-                } catch (err) { eventEmbeddings.push(null); }
-            }
-        }
-        function cosineSimilarity(a, b) {
-            if (!a || !b) return 0;
-            let dot = 0, normA = 0, normB = 0;
-            for (let i = 0; i < a.length; i++) {
-                dot += a[i] * b[i]; normA += a[i] * a[i]; normB += b[i] * b[i];
-            }
-            return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-        }
-        async function aiSearch(query) {
-            if (!extractor || !query.trim()) { renderAll(); return; }
-            const statusEl = document.getElementById('ai-status');
-            if (statusEl) statusEl.textContent = 'Ищу...';
-            try {
-                const output = await extractor(query, { pooling: 'mean', normalize: true });
-                const queryEmbedding = Array.from(output.data);
-                const scored = allEvents.map((event, idx) => ({
-                    event, score: eventEmbeddings[idx] ? cosineSimilarity(queryEmbedding, eventEmbeddings[idx]) : 0
-                }));
-                scored.sort((a, b) => b.score - a.score);
-                const relevant = scored.filter(s => s.score > 0.2);
-                if (statusEl) statusEl.textContent = `Найдено ${relevant.length} событий`;
-                renderWithScores(relevant);
-            } catch (err) {
-                console.error('AI search error:', err);
-                if (statusEl) statusEl.textContent = 'Ошибка поиска';
-            }
-        }
+def _smart_cut(s: str, limit: int = 90) -> str:
+    s = s.strip()
+    if len(s) <= limit: return s
+    s = s[:limit]
+    s = re.sub(r"\s+\S*$", "", s)
+    return s.rstrip(" ,—:;.") + "…"
 
-        // ─── Логика ───
-        let currentDateFilter = 'all';
-        let currentCategoryFilter = 'all';
-        let searchQuery = '';
+def extract_datetime(text: str) -> Tuple[Optional[datetime], Optional[str], Optional[str]]:
+    t = (text or "").lower()
+    now = datetime.now(TZ)
+    dt = None; date_str = None
 
-        async function load() {
-            try {
-                const res = await fetch('events.json?t=' + Date.now());
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                allEvents = await res.json();
-                render();
-                if (aiReady) await indexEvents();
-            } catch (err) {
-                console.error('LOAD ERROR:', err);
-                const feed = document.getElementById('feed');
-                if (feed) feed.innerHTML = '<div class="empty">Ошибка загрузки данных: ' + err.message + '</div>';
-                if (globalLoader) globalLoader.classList.add('hidden');
-            }
-        }
+    if "сегодня" in t:
+        dt = now; date_str = now.strftime("%d.%m.%Y")
+    elif "завтра" in t:
+        dt = now + timedelta(days=1); date_str = dt.strftime("%d.%m.%Y")
+    elif "послезавтра" in t:
+        dt = now + timedelta(days=2); date_str = dt.strftime("%d.%m.%Y")
+    elif "в эти выходные" in t or "на выходных" in t:
+        days_ahead = (5 - now.weekday()) % 7
+        if days_ahead == 0: days_ahead = 7
+        dt = now + timedelta(days=days_ahead); date_str = dt.strftime("%d.%m.%Y")
+    elif "в эту субботу" in t:
+        days_ahead = (5 - now.weekday()) % 7
+        if days_ahead == 0: days_ahead = 7
+        dt = now + timedelta(days=days_ahead); date_str = dt.strftime("%d.%m.%Y")
+    elif "в это воскресенье" in t:
+        days_ahead = (6 - now.weekday()) % 7
+        if days_ahead == 0: days_ahead = 7
+        dt = now + timedelta(days=days_ahead); date_str = dt.strftime("%d.%m.%Y")
 
-        function formatDate(e) {
-            const parts = [];
-            if (e.date_text) parts.push(e.date_text);
-            if (e.time_text) parts.push(e.time_text);
-            if (parts.length) return parts.join(' · ');
-            return 'Дата уточняется';
-        }
-        function isToday(e) {
-            if (!e.date_text) return false;
-            const t = new Date();
-            return e.date_text === `${String(t.getDate()).padStart(2,'0')}.${String(t.getMonth()+1).padStart(2,'0')}.${t.getFullYear()}`;
-        }
-        function isTomorrow(e) {
-            if (!e.date_text) return false;
-            const t = new Date(Date.now() + 86400000);
-            return e.date_text === `${String(t.getDate()).padStart(2,'0')}.${String(t.getMonth()+1).padStart(2,'0')}.${t.getFullYear()}`;
-        }
-        function isWeekend(e) {
-            if (!e.date_text) return false;
-            const now = new Date();
-            for (let i = 0; i < 8; i++) {
-                const d = new Date(now.getTime() + i * 86400000);
-                if (d.getDay() === 6 || d.getDay() === 0) {
-                    if (e.date_text === `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`) return true;
-                }
-            }
-            return false;
-        }
-        function isThisWeek(e) {
-            if (!e.date_text) return false;
-            const now = new Date();
-            for (let i = 0; i < 7; i++) {
-                const d = new Date(now.getTime() + i * 86400000);
-                if (e.date_text === `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`) return true;
-            }
-            return false;
-        }
-        function sortEvents(events) {
-            return [...events].sort((a, b) => {
-                const aHasDate = !!a.date_text;
-                const bHasDate = !!b.date_text;
-                if (aHasDate && bHasDate) return a.date_text.localeCompare(b.date_text);
-                if (aHasDate) return -1;
-                if (bHasDate) return 1;
-                return 0;
-            });
-        }
-        function escapeHtml(s) {
-            const div = document.createElement('div');
-            div.textContent = s || '';
-            return div.innerHTML;
-        }
-        function renderCard(e, idx, score) {
-            const img = e.image ? `<div class="card-image" style="background-image: url('${e.image}')"></div>` : '';
-            const priceClass = (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод') ? 'free' : '';
-            const source = e.source ? `<div class="card-tag">@${e.source}</div>` : '';
-            const scoreHtml = score !== undefined ? `<div class="card-score">Релевантность: ${Math.round(score * 100)}%</div>` : '';
+    if not dt:
+        m = re.search(r"\b(\d{1,2})[./-](\d{1,2})(?:[./-](\d{2,4}))?\b", t)
+        if m:
+            d, mo, y = int(m.group(1)), int(m.group(2)), m.group(3)
+            y = int(y) if y else now.year
+            if y < 100: y += 2000
+            try:
+                dt = TZ.localize(datetime(y, mo, d))
+                date_str = f"{d:02d}.{mo:02d}.{y}"
+            except: pass
 
-            // ─── Не показываем пустые поля ───
-            const venueHtml = e.venue ? `<div class="card-meta">📍 ${escapeHtml(e.venue)}</div>` : '';
-            const priceHtml = e.price ? `<div class="card-price ${priceClass}">${escapeHtml(e.price)}</div>` : '';
+    if not dt:
+        m2 = re.search(r"\b(\d{1,2})\s+([а-яё]+)\b", t, flags=re.I)
+        if m2 and m2.group(2) in MONTHS:
+            d, mo = int(m2.group(1)), MONTHS[m2.group(2)]
+            y = now.year
+            try:
+                dt = TZ.localize(datetime(y, mo, d))
+                date_str = f"{d:02d}.{mo:02d}.{y}"
+            except: pass
 
-            return `
-                <div class="card" data-index="${idx}" onclick="openSidebar(${idx})">
-                    ${img}
-                    <div class="card-body">
-                        ${source}
-                        <h3>${escapeHtml(e.title) || 'Без названия'}</h3>
-                        <div class="card-meta">📅 ${formatDate(e)}</div>
-                        ${venueHtml}
-                        ${priceHtml}
-                        ${scoreHtml}
-                    </div>
-                </div>
-            `;
-        }
-        function render() {
-            try {
-                const feed = document.getElementById('feed');
-                const countEl = document.getElementById('count');
-                if (!feed) return;
-                let filtered = allEvents;
-                if (currentDateFilter === 'today') filtered = filtered.filter(isToday);
-                else if (currentDateFilter === 'tomorrow') filtered = filtered.filter(isTomorrow);
-                else if (currentDateFilter === 'weekend') filtered = filtered.filter(isWeekend);
-                else if (currentDateFilter === 'week') filtered = filtered.filter(isThisWeek);
-                if (currentCategoryFilter === 'free') {
-                    filtered = filtered.filter(e => (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод'));
-                } else if (currentCategoryFilter !== 'all') {
-                    filtered = filtered.filter(e => (e.category === currentCategoryFilter) || (e.kind === currentCategoryFilter));
-                }
-                if (searchQuery) {
-                    const q = searchQuery.toLowerCase();
-                    filtered = filtered.filter(e => {
-                        const text = ((e.title || '') + ' ' + (e.desc || '') + ' ' + (e.venue || '')).toLowerCase();
-                        return text.includes(q);
-                    });
-                }
-                filtered = sortEvents(filtered);
-                if (countEl) countEl.textContent = filtered.length + ' событий';
-                if (filtered.length === 0) {
-                    feed.innerHTML = '<div class="empty">Ничего не найдено. Попробуй другой фильтр.</div>';
-                    return;
-                }
-                feed.innerHTML = filtered.map((e, idx) => renderCard(e, idx)).join('');
-                window.currentFiltered = filtered;
-            } catch (err) {
-                console.error('RENDER ERROR:', err);
-                const feed = document.getElementById('feed');
-                if (feed) feed.innerHTML = '<div class="empty">Ошибка рендера: ' + err.message + '</div>';
-            }
-        }
-        function renderWithScores(scored) {
-            const feed = document.getElementById('feed');
-            const countEl = document.getElementById('count');
-            if (!feed) return;
-            if (countEl) countEl.textContent = scored.length + ' событий';
-            if (scored.length === 0) {
-                feed.innerHTML = '<div class="empty">Ничего не найдено по смыслу. Попробуй другой запрос.</div>';
-                return;
-            }
-            feed.innerHTML = scored.map((s, idx) => renderCard(s.event, idx, s.score)).join('');
-            window.currentFiltered = scored.map(s => s.event);
-        }
-        function renderAll() { render(); }
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            if (!t) return;
-            t.textContent = msg;
-            t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 2000);
-        }
-        function openSidebar(index) {
-            const e = window.currentFiltered[index];
-            if (!e) return;
-            const content = document.getElementById('card-info-content');
-            const card3d = document.getElementById('card-3d');
-            const loadingImg = document.getElementById('card-3d-loading');
-            const loadingInfo = document.getElementById('card-info-loading');
-            const sidebarInner = document.getElementById('sidebar-inner');
-            if (!content || !card3d) return;
-            if (!e.image) sidebarInner.classList.add('no-image');
-            else sidebarInner.classList.remove('no-image');
-            if (loadingImg) loadingImg.classList.remove('hidden');
-            if (loadingInfo) loadingInfo.classList.remove('hidden');
-            const oldImg = card3d.querySelector('img');
-            if (oldImg) oldImg.remove();
-            resetRotation();
-            document.getElementById('sidebar').classList.add('active');
-            document.getElementById('overlay').classList.add('active');
-            document.body.style.overflow = 'hidden';
-            if (e.image) {
-                const img = new Image();
-                img.onload = () => {
-                    if (loadingImg) loadingImg.classList.add('hidden');
-                    card3d.insertBefore(img, card3d.firstChild);
-                };
-                img.onerror = () => {
-                    if (loadingImg) loadingImg.classList.add('hidden');
-                    sidebarInner.classList.add('no-image');
-                };
-                img.alt = e.title || '';
-                img.src = e.image;
-            }
-            const isFree = (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод');
-            const tagHtml = e.source ? `<div class="card-info-tag">@${escapeHtml(e.source)}</div>` : '';
-            const fullText = e.raw || e.desc || 'Описание отсутствует.';
+    time_str = None
+    tm = re.search(r"\b([01]?\d|2[0-3])[:.](\d{2})\b", t)
+    if tm:
+        hh, mm = int(tm.group(1)), int(tm.group(2))
+        time_str = f"{hh:02d}:{mm:02d}"
+        if dt: dt = dt.replace(hour=hh, minute=mm)
 
-            // ─── Не показываем пустые поля ───
-            const venueBlock = e.venue ? `
-                <div class="card-info-meta-item">
-                    <span class="icon">📍</span>
-                    <div><div class="label">Место</div><div class="value">${escapeHtml(e.venue)}</div></div>
-                </div>` : '';
-            const priceBlock = e.price ? `
-                <div class="card-info-meta-item">
-                    <span class="icon">💰</span>
-                    <div><div class="label">Цена</div><div class="value ${isFree ? 'price-free' : ''}">${escapeHtml(e.price)}</div></div>
-                </div>` : '';
+    return dt, date_str, time_str
 
-            setTimeout(() => {
-                content.innerHTML = `
-                    ${tagHtml}
-                    <h1 class="card-info-title">${escapeHtml(e.title) || 'Без названия'}</h1>
-                    <div class="card-info-meta">
-                        <div class="card-info-meta-item">
-                            <span class="icon">📅</span>
-                            <div><div class="label">Дата и время</div><div class="value">${formatDate(e)}</div></div>
-                        </div>
-                        ${venueBlock}
-                        ${priceBlock}
-                    </div>
-                    <div class="card-info-text">${escapeHtml(fullText)}</div>
-                    <div class="card-info-actions">
-                        ${e.source_link ? `<a class="card-info-btn primary" href="${e.source_link}" target="_blank" rel="noopener">📱 Открыть в Telegram</a>` : ''}
-                        <button class="card-info-btn secondary" onclick="downloadICS(${index})">📅 В календарь</button>
-                        <button class="card-info-btn secondary" onclick="shareEvent(${index})">🔗 Поделиться</button>
-                        <button class="card-info-btn secondary" onclick="closeSidebar()">Закрыть</button>
-                    </div>
-                `;
-                if (loadingInfo) loadingInfo.classList.add('hidden');
-            }, 150);
-        }
-        function shareEvent(index) {
-            const e = window.currentFiltered[index];
-            if (!e) return;
-            const text = `${e.title}\n${e.source_link || ''}`;
-            if (navigator.share) {
-                navigator.share({ title: e.title, text: text }).catch(() => {});
-            } else {
-                navigator.clipboard.writeText(text).then(() => showToast('Скопировано!')).catch(() => showToast('Не удалось скопировать'));
-            }
-        }
-        function downloadICS(index) {
-            const e = window.currentFiltered[index];
-            if (!e) return;
-            if (!e.start) { showToast('Дата события не указана'); return; }
-            const start = new Date(e.start);
-            const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
-            const fmt = d => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
-            const ics = [
-                "BEGIN:VCALENDAR", "VERSION:2.0", "BEGIN:VEVENT",
-                `DTSTART:${fmt(start)}`, `DTEND:${fmt(end)}`,
-                `SUMMARY:${e.title || "Событие"}`,
-                `DESCRIPTION:${(e.desc || "").replace(/\n/g, ' ').substring(0, 200)}`,
-                `LOCATION:${e.venue || ""}`, `URL:${e.source_link || ""}`,
-                "END:VEVENT", "END:VCALENDAR"
-            ].join("\r\n");
-            const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${(e.title || "event").substring(0, 40)}.ics`;
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('Скачано!');
-        }
-        function closeSidebar() {
-            document.getElementById('sidebar').classList.remove('active');
-            document.getElementById('overlay').classList.remove('active');
-            document.body.style.overflow = '';
-            resetRotation();
-        }
-        const card3d = document.getElementById('card-3d');
-        const card3dWrap = document.getElementById('card-3d-wrap');
-        let rotX = 0, rotY = 0;
-        let isDragging = false, startX = 0, startY = 0, startRotX = 0, startRotY = 0;
-        function applyRotation() {
-            if (!card3d) return;
-            card3d.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
-        }
-        function resetRotation() {
-            rotX = 0; rotY = 0;
-            if (!card3d) return;
-            card3d.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.3, 0.64, 1)';
-            applyRotation();
-            setTimeout(() => { card3d.style.transition = 'transform 0.1s ease-out'; }, 600);
-        }
-        function onStart(x, y) {
-            isDragging = true;
-            startX = x; startY = y;
-            startRotX = rotX; startRotY = rotY;
-            if (card3dWrap) card3dWrap.classList.add('touched');
-            if (card3d) card3d.style.transition = 'none';
-        }
-        function onMove(x, y) {
-            if (!isDragging) return;
-            const dx = x - startX, dy = y - startY;
-            rotY = Math.max(-40, Math.min(40, startRotY + dx * 0.4));
-            rotX = Math.max(-40, Math.min(40, startRotX - dy * 0.4));
-            applyRotation();
-        }
-        function onEnd() {
-            isDragging = false;
-            if (!card3d) return;
-            card3d.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.3, 0.64, 1)';
-            rotX = 0; rotY = 0;
-            applyRotation();
-        }
-        if (card3d) {
-            card3d.addEventListener('mousedown', (e) => { onStart(e.clientX, e.clientY); e.preventDefault(); });
-            document.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
-            document.addEventListener('mouseup', onEnd);
-            card3d.addEventListener('touchstart', (e) => { const t = e.touches[0]; onStart(t.clientX, t.clientY); }, { passive: true });
-            card3d.addEventListener('touchmove', (e) => { const t = e.touches[0]; onMove(t.clientX, t.clientY); }, { passive: true });
-            card3d.addEventListener('touchend', onEnd);
-        }
-        document.getElementById('sidebar-close').addEventListener('click', closeSidebar);
-        document.getElementById('overlay').addEventListener('click', closeSidebar);
-        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSidebar(); });
-        document.getElementById('search').addEventListener('input', (e) => {
-            searchQuery = e.target.value; render();
-        });
-        document.getElementById('ai-query').addEventListener('input', (e) => {
-            const query = e.target.value;
-            if (query.length > 3) aiSearch(query);
-            else if (query.length === 0) renderAll();
-        });
-        document.getElementById('date-filters').addEventListener('click', (e) => {
-            if (e.target.tagName === 'BUTTON') {
-                document.querySelectorAll('#date-filters button').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                currentDateFilter = e.target.dataset.date;
-                render();
-            }
-        });
-        document.getElementById('category-filters').addEventListener('click', (e) => {
-            if (e.target.tagName === 'BUTTON') {
-                document.querySelectorAll('#category-filters button').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                currentCategoryFilter = e.target.dataset.category;
-                render();
-            }
-        });
-        window.openSidebar = openSidebar;
-        window.closeSidebar = closeSidebar;
-        window.shareEvent = shareEvent;
-        window.downloadICS = downloadICS;
-        setTimeout(() => {
-            if (globalLoader && !globalLoader.classList.contains('hidden')) {
-                globalLoader.classList.add('hidden');
-            }
-        }, 20000);
-        load();
-        initAI();
-    </script>
-</body>
-</html>
+def extract_venue(text: str, rules: dict) -> Optional[str]:
+    for venue in VENUE_HINTS:
+        if re.search(rf"\b{re.escape(venue)}\b", text, re.I):
+            return normalize_venue(venue, rules)
+
+    m = re.search(
+        r"\b(?:в|на)\s+(?:клуб[еи]|бар[еи]|галере[еи]|музе[еи]|театр[еи]|центр[еи]|пространств[еи]|площадк[еи]|арен[еи]|холл[еи])\s+[«\"]?([А-ЯЁA-Z][^»\".,\n]{2,40})",
+        text
+    )
+    if m:
+        return normalize_venue(m.group(1).strip().strip('«»"\''), rules)
+
+    m = re.search(
+        r"\b(?:ул\.|улица|пр\.|проспект|пер\.|переулок|шоссе|бульвар)\s+[А-ЯЁA-Z][^,.\n]{2,40}(?:,\s*\d+[А-Яа-я]?)?",
+        text
+    )
+    if m:
+        return m.group(0).strip()
+
+    return None
+
+def title_from_text(text: str) -> str:
+    t = re.sub(r"@\w+", "", norm(re.sub(r"https?://\S+|#\S+", "", text or "")))
+    t = re.sub(r"^(и|а|ну|вот|так)\s+", "", t, flags=re.I).strip()
+    t = re.sub(r"^\W+", "", t)
+    for kw in EVENT_KEYWORDS:
+        m = re.search(rf"\b{kw}[^.!?\n]*", t, flags=re.I)
+        if m:
+            cand = m.group(0).strip(" -—.:,")
+            if len(cand) >= 8:
+                return sentence_case(_smart_cut(cand))
+    first = re.split(r"[.!?\n]\s*", t, maxsplit=1)[0].strip(" -—.:,")
+    return sentence_case(_smart_cut(first or "Событие"))
+
+def make_desc(text: str) -> str:
+    t = re.sub(r"@\w+", "", norm(re.sub(r"https?://\S+|#\S+", "", text or "")))
+    parts = re.split(r"(?<=[.!?])\s+", t)
+    parts = [p for p in parts if 25 <= len(p) <= 220][:2]
+    out = " ".join(parts) if parts else t[:200]
+    return sentence_case(out)
+
+def price_from_text(text: str) -> Optional[str]:
+    low = (text or "").lower()
+
+    if any(x in low for x in [
+        "вход свобод", "вход бесплат", "бесплатно", "free",
+        "по донату", "donation", "0₽", "0 ₽", "0 руб"
+    ]):
+        return "Вход свободный"
+
+    m = re.search(r"(?:стоимость|вход|билет[ыа]?|цена)\s*[:\-—]?\s*([^\n.,;]{2,40})", low)
+    if m:
+        val = m.group(1).strip()
+        m2 = re.search(r"(\d{2,6})\s*(?:₽|р|руб)", val)
+        if m2:
+            return f"{m2.group(1)} ₽"
+        if "бесплат" in val or "свобод" in val:
+            return "Вход свободный"
+        if len(val) <= 40 and not val.startswith("http"):
+            return val.capitalize()
+
+    m = re.search(r"\b(\d{2,6})\s*[-–]\s*(\d{2,6})\s*(?:₽|р|руб)\b", low)
+    if m:
+        return f"{m.group(1)}–{m.group(2)} ₽"
+
+    m = re.search(r"\bот\s*(\d{2,6})\s*(?:₽|р|руб)\b", low)
+    if m:
+        return f"от {m.group(1)} ₽"
+
+    m = re.search(r"\b(\d{2,6})\s*(?:₽|р|руб)\b", low)
+    if m:
+        return f"{m.group(1)} ₽"
+
+    return None
+
+def download_image(url: str, channel: str) -> Optional[str]:
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=15)
+        r.raise_for_status()
+        ext = ".jpg"
+        for e in (".png", ".webp", ".jpeg", ".jpg"):
+            if e in url.lower(): ext = e; break
+        h = hashlib.md5(url.encode()).hexdigest()[:10]
+        fname = f"{channel}_{h}{ext}"
+        path = IMAGES_DIR / fname
+        path.write_bytes(r.content)
+        return f"data/images/{fname}"
+    except Exception as e:
+        logging.warning(f"Image download failed: {e}")
+        return None
+
+def is_past(date_text: Optional[str]) -> bool:
+    """True, если дата уже прошла."""
+    if not date_text:
+        return False
+    try:
+        parts = date_text.split(".")
+        if len(parts) == 3:
+            d, m, y = int(parts[0]), int(parts[1]), int(parts[2])
+            event_date = datetime(y, m, d, tzinfo=TZ)
+            today = datetime.now(TZ).replace(hour=0, minute=0, second=0, microsecond=0)
+            return event_date < today
+    except Exception:
+        pass
+    return False
+
+def harvest_preview(channels: List[str], rules: dict) -> List[Event]:
+    out: List[Event] = []
+    for ch in channels:
+        count = 0
+        try:
+            url = f"https://t.me/s/{ch}"
+            r = requests.get(url, headers=HEADERS, timeout=20)
+            r.raise_for_status()
+            soup = BeautifulSoup(r.text, "html.parser")
+            items = soup.select("div.tgme_widget_message_wrap")
+            for it in items[:100]:
+                tnode = it.select_one(".tgme_widget_message_text")
+                text = norm(tnode.get_text("\n", strip=True) if tnode else "")
+                if not text or should_exclude(text, rules):
+                    continue
+
+                dt, date_str, time_str = extract_datetime(text)
+
+                # ─── ФИЛЬТР 1: пропускаем прошедшие события ───
+                if is_past(date_str):
+                    continue
+
+                # ─── ФИЛЬТР 2: должен быть либо ключевое слово + дата/время ───
+                low = text.lower()
+                has_event_kw = bool(EVENT_RE.search(low))
+                has_date = bool(re.search(DATE_TOKENS, low))
+                has_time = bool(re.search(TIME_TOKENS, low))
+
+                # Пропускаем, если нет ключевого слова или нет даты/времени
+                if not has_event_kw:
+                    continue
+                if not (has_date or has_time):
+                    continue
+
+                link_node = it.select_one("a.tgme_widget_message_date")
+                link = link_node.get("href") if link_node else f"https://t.me/{ch}"
+
+                img = None
+                ph = it.select_one("a.tgme_widget_message_photo_wrap") or it.select_one("a.tgme_widget_message_video_thumb")
+                if ph and ph.has_attr("style"):
+                    mm = re.search(r"url\(['\"]?(.*?)['\"]?\)", ph["style"])
+                    if mm:
+                        img = download_image(mm.group(1), ch)
+
+                title = clean_title(title_from_text(text), rules)
+                desc = make_desc(text)
+                price = price_from_text(text)
+                venue = extract_venue(text, rules)
+                category = detect_category(text)
+
+                ev = Event(
+                    title=title, desc=desc,
+                    start=dt.isoformat() if dt else None,
+                    date_text=date_str, time_text=time_str,
+                    city=CITY, venue=venue, price=price,
+                    source=ch, source_link=link, posted_at=None,
+                    raw=text, image=img,
+                    kind=category, category=category
+                )
+                out.append(ev); count += 1
+
+            logging.info(f"{ch}: +{count} items")
+        except Exception as e:
+            logging.warning(f"Preview failed for {ch}: {e}")
+    return out
+
+def smart_deduplicate(events: List[Event]) -> List[Event]:
+    unique_events = {}
+    for ev in events:
+        fingerprint = (
+            re.sub(r'[^\w\s]', '', ev.title.lower())[:40],
+            ev.date_text or "",
+            ev.venue or "unknown"
+        )
+        if fingerprint not in unique_events:
+            unique_events[fingerprint] = ev
+        else:
+            existing = unique_events[fingerprint]
+            if ev.source not in existing.source:
+                existing.source += f", {ev.source}"
+            if ev.image and not existing.image:
+                existing.image = ev.image
+    return list(unique_events.values())
+
+def cleanup_unused_images(events: List[Event]):
+    existing_images = set(p.name for p in IMAGES_DIR.glob("*") if p.is_file())
+    used_images = set(ev.image.replace("data/images/", "") for ev in events if ev.image)
+    for img_name in (existing_images - used_images):
+        try:
+            (IMAGES_DIR / img_name).unlink()
+        except Exception:
+            pass
+
+def save_outputs(events: List[Event]):
+    DATA_DIR.mkdir(exist_ok=True)
+    payload = [asdict(e) for e in events]
+    (DATA_DIR / "events.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), "utf-8")
+    Path("events.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), "utf-8")
+    logging.info(f"Saved {len(events)} events")
+
+def run_once():
+    logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
+    channels = load_json_file("channels.json", [])
+    rules = load_json_file("rules.json", {"hard_exclude_words": [], "title_prefixes_remove": [], "venue_synonyms": {}})
+
+    if not channels:
+        logging.error("channels.json пуст или не найден")
+        return
+
+    logging.info(f"Harvest. Channels: {len(channels)}")
+    items = harvest_preview(channels, rules)
+    logging.info(f"Raw events: {len(items)}")
+    items = smart_deduplicate(items)
+    logging.info(f"After dedupe: {len(items)}")
+    cleanup_unused_images(items)
+    save_outputs(items)
+
+if __name__ == "__main__":
+    run_once()
