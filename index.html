@@ -12,7 +12,7 @@
             --text: #f5f5f5;
             --muted: #a3a3a3;
             --accent: #c4ff4d;
-            --sidebar-width: 520px;
+            --sidebar-width: 720px;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body {
@@ -25,6 +25,7 @@
             max-width: 1200px;
             margin: 0 auto;
             -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
         }
         header {
             display: flex;
@@ -121,61 +122,108 @@
         }
         .card-price.free { color: var(--accent); }
 
-        /* Сайдбар */
-        .sidebar-overlay {
+        /* Оверлей */
+        .overlay {
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.7);
+            background: rgba(0,0,0,0.85);
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s;
             z-index: 998;
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(6px);
         }
-        .sidebar-overlay.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
+        .overlay.active { opacity: 1; pointer-events: auto; }
+
+        /* Сайдбар — «карточка-письмо» */
         .sidebar {
             position: fixed;
             top: 0;
-            right: 0;
+            left: 0;
             width: var(--sidebar-width);
             max-width: 100%;
             height: 100vh;
-            background: #0f0f0f;
-            border-left: 1px solid var(--border);
             z-index: 999;
-            transform: translateX(100%);
-            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(-100%);
+            transition: transform 0.45s cubic-bezier(0.34, 1.3, 0.64, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            pointer-events: none;
+            perspective: 1500px;
+        }
+        .sidebar.active {
+            transform: translateX(0);
+            pointer-events: auto;
+        }
+
+        /* Контейнер для 3D-поворота */
+        .card-3d {
+            width: 100%;
+            height: 100%;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: row;
+            background: #0f0f0f;
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow:
+                0 40px 100px rgba(0,0,0,0.7),
+                0 0 0 1px rgba(255,255,255,0.05) inset;
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out;
+            cursor: grab;
+            position: relative;
+        }
+        .card-3d:active { cursor: grabbing; }
+
+        /* Левая часть — картинка */
+        .card-3d-image {
+            flex: 0 0 50%;
+            background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
+            background-size: cover;
+            background-position: center;
+            position: relative;
+            min-height: 100%;
+        }
+        .card-3d-image::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to right, transparent 70%, rgba(15,15,15,0.4));
+        }
+
+        /* Правая часть — текст */
+        .card-3d-body {
+            flex: 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
-        .sidebar.active { transform: translateX(0); }
-
-        .sidebar-header {
+        .card-3d-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px 24px;
+            padding: 18px 22px;
             border-bottom: 1px solid var(--border);
             flex-shrink: 0;
         }
-        .sidebar-header h2 {
-            font-size: 1rem;
+        .card-3d-header h2 {
+            font-size: 0.85rem;
             font-weight: 700;
             color: var(--muted);
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
         }
-        .sidebar-close {
+        .card-3d-close {
             background: rgba(255,255,255,0.08);
             border: none;
             color: var(--text);
-            font-size: 1.5rem;
-            width: 40px;
-            height: 40px;
+            font-size: 1.4rem;
+            width: 38px;
+            height: 38px;
             border-radius: 50%;
             cursor: pointer;
             display: flex;
@@ -183,30 +231,22 @@
             justify-content: center;
             transition: background 0.2s;
             line-height: 1;
+            flex-shrink: 0;
         }
-        .sidebar-close:hover { background: rgba(255,255,255,0.15); }
+        .card-3d-close:hover { background: rgba(255,255,255,0.18); }
 
-        .sidebar-content {
+        .card-3d-scroll {
             flex: 1;
             overflow-y: auto;
             padding: 24px;
             scrollbar-width: thin;
             scrollbar-color: #333 transparent;
         }
-        .sidebar-content::-webkit-scrollbar { width: 8px; }
-        .sidebar-content::-webkit-scrollbar-track { background: transparent; }
-        .sidebar-content::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        .card-3d-scroll::-webkit-scrollbar { width: 8px; }
+        .card-3d-scroll::-webkit-scrollbar-track { background: transparent; }
+        .card-3d-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
 
-        .sidebar-image {
-            width: 100%;
-            border-radius: 16px;
-            margin-bottom: 20px;
-            background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
-            aspect-ratio: 4/3;
-            background-size: cover;
-            background-position: center;
-        }
-        .sidebar-tag {
+        .card-3d-tag {
             display: inline-block;
             font-size: 0.75rem;
             text-transform: uppercase;
@@ -218,72 +258,65 @@
             background: rgba(196, 255, 77, 0.1);
             border-radius: 6px;
         }
-        .sidebar-title {
-            font-size: 1.5rem;
+        .card-3d-title {
+            font-size: 1.4rem;
             font-weight: 800;
             line-height: 1.3;
             margin-bottom: 20px;
             letter-spacing: -0.5px;
         }
-        .sidebar-meta {
+        .card-3d-meta {
             display: flex;
             flex-direction: column;
             gap: 10px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             padding: 16px;
             background: rgba(255,255,255,0.03);
             border-radius: 14px;
             border: 1px solid var(--border);
         }
-        .sidebar-meta-item {
+        .card-3d-meta-item {
             display: flex;
             align-items: flex-start;
             gap: 10px;
             font-size: 0.95rem;
         }
-        .sidebar-meta-item .icon {
+        .card-3d-meta-item .icon {
             font-size: 1.1rem;
             flex-shrink: 0;
             width: 24px;
             text-align: center;
         }
-        .sidebar-meta-item .label {
+        .card-3d-meta-item .label {
             color: var(--muted);
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             font-weight: 600;
             margin-bottom: 2px;
         }
-        .sidebar-meta-item .value {
-            color: var(--text);
-            font-weight: 500;
-        }
-        .sidebar-meta-item .value.price-free {
-            color: var(--accent);
-            font-weight: 700;
-        }
+        .card-3d-meta-item .value { color: var(--text); font-weight: 500; }
+        .card-3d-meta-item .value.price-free { color: var(--accent); font-weight: 700; }
 
-        .sidebar-text {
+        .card-3d-text {
             font-size: 0.95rem;
             line-height: 1.7;
             color: #d0d0d0;
             white-space: pre-wrap;
             word-wrap: break-word;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
             padding: 16px;
             background: rgba(255,255,255,0.02);
             border-radius: 14px;
             border: 1px solid var(--border);
         }
 
-        .sidebar-actions {
+        .card-3d-actions {
             display: flex;
             flex-direction: column;
             gap: 10px;
-            margin-top: auto;
         }
-        .sidebar-btn {
+        .card-3d-btn {
             display: flex;
             align-items: center;
             justify-content: center;
@@ -297,26 +330,51 @@
             border: none;
             transition: all 0.2s;
         }
-        .sidebar-btn.primary {
+        .card-3d-btn.primary {
             background: var(--accent);
             color: #000;
         }
-        .sidebar-btn.primary:hover { opacity: 0.85; transform: translateY(-2px); }
-        .sidebar-btn.secondary {
+        .card-3d-btn.primary:hover { opacity: 0.85; transform: translateY(-2px); }
+        .card-3d-btn.secondary {
             background: rgba(255,255,255,0.06);
             color: var(--text);
             border: 1px solid var(--border);
         }
-        .sidebar-btn.secondary:hover { background: rgba(255,255,255,0.1); }
+        .card-3d-btn.secondary:hover { background: rgba(255,255,255,0.1); }
+
+        /* Подсказка «поверни» */
+        .card-3d-hint {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.6);
+            color: var(--muted);
+            font-size: 0.75rem;
+            padding: 6px 14px;
+            border-radius: 100px;
+            border: 1px solid var(--border);
+            pointer-events: none;
+            transition: opacity 0.4s;
+            opacity: 0;
+        }
+        .sidebar.active .card-3d-hint { opacity: 1; }
+        .card-3d.touched .card-3d-hint { opacity: 0; }
 
         .empty { text-align: center; padding: 80px 20px; color: var(--muted); grid-column: 1/-1; }
 
-        @media (max-width: 600px) {
+        @media (max-width: 700px) {
             :root { --sidebar-width: 100%; }
+            .sidebar { padding: 20px 10px; }
+            .card-3d {
+                flex-direction: column;
+                max-height: 95vh;
+            }
+            .card-3d-image { flex: 0 0 40%; }
+            .card-3d-title { font-size: 1.15rem; }
             h1 { font-size: 1.5rem; }
             .grid { grid-template-columns: 1fr; }
             .filters button { padding: 8px 14px; font-size: 0.85rem; }
-            .sidebar-title { font-size: 1.2rem; }
         }
     </style>
 </head>
@@ -341,16 +399,20 @@
 
     <div id="feed" class="grid"></div>
 
-    <!-- Оверлей -->
-    <div class="sidebar-overlay" id="overlay"></div>
+    <div class="overlay" id="overlay"></div>
 
-    <!-- Сайдбар -->
     <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h2>Событие</h2>
-            <button class="sidebar-close" id="sidebar-close">×</button>
+        <div class="card-3d" id="card-3d">
+            <div class="card-3d-image" id="card-3d-image"></div>
+            <div class="card-3d-body">
+                <div class="card-3d-header">
+                    <h2>Событие</h2>
+                    <button class="card-3d-close" id="sidebar-close">×</button>
+                </div>
+                <div class="card-3d-scroll" id="card-3d-content"></div>
+            </div>
+            <div class="card-3d-hint">👆 Поверни карточку</div>
         </div>
-        <div class="sidebar-content" id="sidebar-content"></div>
     </aside>
 
     <script>
@@ -474,39 +536,40 @@
             const e = window.currentFiltered[index];
             if (!e) return;
 
-            const content = document.getElementById('sidebar-content');
+            const content = document.getElementById('card-3d-content');
+            const imgEl = document.getElementById('card-3d-image');
             const isFree = (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод');
 
-            const imgHtml = e.image
-                ? `<div class="sidebar-image" style="background-image: url('${e.image}')"></div>`
-                : `<div class="sidebar-image"></div>`;
+            // Картинка
+            if (e.image) {
+                imgEl.style.backgroundImage = `url('${e.image}')`;
+            } else {
+                imgEl.style.backgroundImage = 'linear-gradient(135deg, #1a1a1a, #2a2a2a)';
+            }
 
-            const tagHtml = e.source ? `<div class="sidebar-tag">@${escapeHtml(e.source)}</div>` : '';
-
-            // Полный текст: используем raw (оригинал) или desc
+            const tagHtml = e.source ? `<div class="card-3d-tag">@${escapeHtml(e.source)}</div>` : '';
             const fullText = e.raw || e.desc || 'Описание отсутствует.';
 
             content.innerHTML = `
-                ${imgHtml}
                 ${tagHtml}
-                <h1 class="sidebar-title">${escapeHtml(e.title) || 'Без названия'}</h1>
+                <h1 class="card-3d-title">${escapeHtml(e.title) || 'Без названия'}</h1>
 
-                <div class="sidebar-meta">
-                    <div class="sidebar-meta-item">
+                <div class="card-3d-meta">
+                    <div class="card-3d-meta-item">
                         <span class="icon">📅</span>
                         <div>
                             <div class="label">Дата и время</div>
                             <div class="value">${formatDate(e)}</div>
                         </div>
                     </div>
-                    <div class="sidebar-meta-item">
+                    <div class="card-3d-meta-item">
                         <span class="icon">📍</span>
                         <div>
                             <div class="label">Место</div>
                             <div class="value">${escapeHtml(e.venue) || 'Уточняется'}</div>
                         </div>
                     </div>
-                    <div class="sidebar-meta-item">
+                    <div class="card-3d-meta-item">
                         <span class="icon">💰</span>
                         <div>
                             <div class="label">Цена</div>
@@ -515,13 +578,16 @@
                     </div>
                 </div>
 
-                <div class="sidebar-text">${escapeHtml(fullText)}</div>
+                <div class="card-3d-text">${escapeHtml(fullText)}</div>
 
-                <div class="sidebar-actions">
-                    ${e.source_link ? `<a class="sidebar-btn primary" href="${e.source_link}" target="_blank" rel="noopener">📱 Открыть в Telegram</a>` : ''}
-                    <button class="sidebar-btn secondary" onclick="closeSidebar()">Закрыть</button>
+                <div class="card-3d-actions">
+                    ${e.source_link ? `<a class="card-3d-btn primary" href="${e.source_link}" target="_blank" rel="noopener">📱 Открыть в Telegram</a>` : ''}
+                    <button class="card-3d-btn secondary" onclick="closeSidebar()">Закрыть</button>
                 </div>
             `;
+
+            // Сброс поворота
+            resetRotation();
 
             document.getElementById('sidebar').classList.add('active');
             document.getElementById('overlay').classList.add('active');
@@ -532,8 +598,73 @@
             document.getElementById('sidebar').classList.remove('active');
             document.getElementById('overlay').classList.remove('active');
             document.body.style.overflow = '';
+            resetRotation();
         }
 
+        // ─── 3D-поворот карточки ───
+        const card3d = document.getElementById('card-3d');
+        let rotX = 0, rotY = 0;
+        let isDragging = false;
+        let startX = 0, startY = 0;
+        let startRotX = 0, startRotY = 0;
+
+        function applyRotation() {
+            card3d.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+        }
+
+        function resetRotation() {
+            rotX = 0; rotY = 0;
+            card3d.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.3, 0.64, 1)';
+            applyRotation();
+            setTimeout(() => { card3d.style.transition = 'transform 0.1s ease-out'; }, 500);
+        }
+
+        function onStart(x, y) {
+            isDragging = true;
+            startX = x; startY = y;
+            startRotX = rotX; startRotY = rotY;
+            card3d.classList.add('touched');
+            card3d.style.transition = 'none';
+        }
+
+        function onMove(x, y) {
+            if (!isDragging) return;
+            const dx = x - startX;
+            const dy = y - startY;
+            rotY = Math.max(-30, Math.min(30, startRotY + dx * 0.3));
+            rotX = Math.max(-30, Math.min(30, startRotX - dy * 0.3));
+            applyRotation();
+        }
+
+        function onEnd() {
+            isDragging = false;
+            card3d.style.transition = 'transform 0.5s cubic-bezier(0.34, 1.3, 0.64, 1)';
+            rotX = 0; rotY = 0;
+            applyRotation();
+        }
+
+        // Мышь
+        card3d.addEventListener('mousedown', (e) => {
+            if (e.target.closest('button, a')) return;
+            onStart(e.clientX, e.clientY);
+            e.preventDefault();
+        });
+        document.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+        document.addEventListener('mouseup', onEnd);
+
+        // Тач
+        card3d.addEventListener('touchstart', (e) => {
+            if (e.target.closest('button, a')) return;
+            const t = e.touches[0];
+            onStart(t.clientX, t.clientY);
+        }, { passive: true });
+        card3d.addEventListener('touchmove', (e) => {
+            const t = e.touches[0];
+            onMove(t.clientX, t.clientY);
+        }, { passive: true });
+        card3d.addEventListener('touchend', onEnd);
+
+        // Закрытие
         document.getElementById('sidebar-close').addEventListener('click', closeSidebar);
         document.getElementById('overlay').addEventListener('click', closeSidebar);
         document.addEventListener('keydown', (e) => {
