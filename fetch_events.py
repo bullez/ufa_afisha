@@ -1,11 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Ufa Afisha — финальная версия
-- Сбор из t.me/s/ (безопасно, без API)
-- Фильтрация через rules.json
-- Скачивание картинок локально
-- Парсинг дат, мест, цен
-- Сохранение в data/events.json и events.json
+Ufa Afisha — финальная версия с улучшенным парсером
 """
 
 import os, re, json, time, logging, hashlib
@@ -42,7 +37,7 @@ EVENT_KEYWORDS = [
     "кино","фильм","кинопоказ","концерт","джаз","оркестр","джем","dj","вечеринк","рейв",
     "лектор","лекци","семинар","мастер-класс","воркшоп","театр","спектакл","перформанс",
     "выставк","галере","музей","арт","экскурс","киноклуб","фестиваль","маркет","стендап",
-    "квиз","игра","показ","премьера","открытие"
+    "квиз","игра","показ","премьера","открытие","тренинг","встреча","концерт"
 ]
 EVENT_RE = re.compile("|".join(EVENT_KEYWORDS), re.I)
 
@@ -56,10 +51,13 @@ MONTHS = {
     "сен":9,"сентября":9,"окт":10,"октября":10,"ноя":11,"ноября":11,"дек":12,"декабря":12
 }
 
+# Известные места Уфы
 VENUE_HINTS = [
-    "Арт-Квадрат", "Арт Квадрат", "Zaman", "Мирас", "Клуб Мечты", "Мама варит кофе",
-    "Стерх", "Джаз-клуб", "Бар Муви", "Movie", "Vinoteka", "Даско", "Огни Уфы",
-    "Гостиный двор", "Конгресс-холл", "Торатау", "Башкирия", "Neft", "Мира",
+    "Арт-Квадрат", "Арт Квадрат", "Арт-КВАДРАТ", "Zaman", "Мирас", "Клуб Мечты",
+    "Мама варит кофе", "Стерх", "Джаз-клуб", "Бар Муви", "Movie", "Vinoteka", "Даско",
+    "Огни Уфы", "Гостиный двор", "Конгресс-холл", "Торатау", "Башкирия", "Neft",
+    "Особняк", "Артерия", "Юкси Парк", "Мегаполис", "Пятница", "Правда",
+    "Уфа-Арена", "Синема Парк", "Галерея Арт", "ЦКиНТ", "ДК Ядкарь",
 ]
 
 def load_rules() -> dict:
@@ -116,6 +114,21 @@ def extract_datetime(text: str) -> Tuple[Optional[datetime], Optional[str], Opti
         dt = now; date_str = now.strftime("%d.%m.%Y")
     elif "завтра" in t:
         dt = now + timedelta(days=1); date_str = dt.strftime("%d.%m.%Y")
+    elif "послезавтра" in t:
+        dt = now + timedelta(days=2); date_str = dt.strftime("%d.%m.%Y")
+    elif "в эти выходные" in t or "на выходных" in t:
+        # Ближайшая суббота
+        days_ahead = (5 - now.weekday()) % 7
+        if days_ahead == 0: days_ahead = 7
+        dt = now + timedelta(days=days_ahead); date_str = dt.strftime("%d.%m.%Y")
+    elif "в эту субботу" in t:
+        days_ahead = (5 - now.weekday()) % 7
+        if days_ahead == 0: days_ahead = 7
+        dt = now + timedelta(days=days_ahead); date_str = dt.strftime("%d.%m.%Y")
+    elif "в это воскресенье" in t:
+        days_ahead = (6 - now.weekday()) % 7
+        if days_ahead == 0: days_ahead = 7
+        dt = now + timedelta(days=days_ahead); date_str = dt.strftime("%d.%m.%Y")
 
     if not dt:
         m = re.search(r"\b(\d{1,2})[./-](\d{1,2})(?:[./-](\d{2,4}))?\b", t)
@@ -148,12 +161,38 @@ def extract_datetime(text: str) -> Tuple[Optional[datetime], Optional[str], Opti
     return dt, date_str, time_str
 
 def extract_venue(text: str) -> Optional[str]:
+    """
+    Улучшенный парсер места:
+    1) Известные места (VENUE_HINTS)
+    2) Паттерн «в клубе/баре/галерее/центре/пространстве X»
+    3) Адрес: «ул. X, Y», «пр. X, Y», «X, Y»
+    """
+    # 1. Известные
     for venue in VENUE_HINTS:
         if re.search(rf"\b{re.escape(venue)}\b", text, re.I):
             return venue
-    m = re.search(r"\b(?:в|на)\s+(?:клубе|баре|галерее|музее|театре|центре|пространстве)\s+[«\"]?([А-ЯЁA-Z][^»\".,\n]{2,40})", text)
+
+    # 2. «в клубе X», «в баре X», «в галерее X», «на площадке X»
+    m = re.search(
+        r"\b(?:в|на)\s+(?:клуб[еи]|бар[еи]|галере[еи]|музе[еи]|театр[еи]|центр[еи]|пространств[еи]|площадк[еи]|арен[еи]|холл[еи])\s+[«\"]?([А-ЯЁA-Z][^»\".,\n]{2,40})",
+        text
+    )
     if m:
-        return m.group(1).strip()
+        return m.group(1).strip().strip('«»"\'')
+
+    # 3. Адрес: «ул. Ленина, 10», «пр. Октября, 67/2»
+    m = re.search(
+        r"\b(?:ул\.|улица|пр\.|проспект|пер\.|переулок|шоссе|бульвар)\s+[А-ЯЁA-Z][^,.\n]{2,40}(?:,\s*\d+[А-Яа-я]?)?",
+        text
+    )
+    if m:
+        return m.group(0).strip()
+
+    # 4. Просто «X, Y» где X — название на кириллице, Y — число
+    m = re.search(r"\b([А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?)\s*,\s*(\d+[А-Яа-я]?)", text)
+    if m:
+        return f"{m.group(1)}, {m.group(2)}"
+
     return None
 
 def title_from_text(text: str) -> str:
@@ -177,13 +216,50 @@ def make_desc(text: str) -> str:
     return sentence_case(out)
 
 def price_from_text(text: str) -> Optional[str]:
+    """
+    Улучшенный парсер цены:
+    1) Бесплатно/свободно
+    2) «Стоимость: X», «Вход: X», «Билеты: X»
+    3) «от X ₽», «X ₽», «X-Y ₽», «X руб»
+    """
     low = (text or "").lower()
-    if any(x in low for x in ["вход свобод", "вход бесплат", "бесплатно", "free", "по донату"]):
+
+    # 1. Бесплатно
+    if any(x in low for x in [
+        "вход свобод", "вход бесплат", "бесплатно", "free",
+        "по донату", "donation", "0₽", "0 ₽", "0 руб"
+    ]):
         return "Вход свободный"
-    m = re.search(r"\bот?\s*(\d{2,6})\s*(?:₽|р|руб)\b", low)
-    if m: return f"от {m.group(1)} ₽"
+
+    # 2. «Стоимость: X», «Вход: X», «Билеты: X»
+    m = re.search(r"(?:стоимость|вход|билет[ыа]?|цена)\s*[:\-—]?\s*([^\n.,;]{2,40})", low)
+    if m:
+        val = m.group(1).strip()
+        # Если внутри числа с ₽/руб
+        m2 = re.search(r"(\d{2,6})\s*(?:₽|р|руб)", val)
+        if m2:
+            return f"{m2.group(1)} ₽"
+        if "бесплат" in val or "свобод" in val:
+            return "Вход свободный"
+        # Если есть какое-то описание — вернём как есть
+        if len(val) <= 40 and not val.startswith("http"):
+            return val.capitalize()
+
+    # 3. Диапазон «X–Y ₽»
+    m = re.search(r"\b(\d{2,6})\s*[-–]\s*(\d{2,6})\s*(?:₽|р|руб)\b", low)
+    if m:
+        return f"{m.group(1)}–{m.group(2)} ₽"
+
+    # 4. «от X ₽»
+    m = re.search(r"\bот\s*(\d{2,6})\s*(?:₽|р|руб)\b", low)
+    if m:
+        return f"от {m.group(1)} ₽"
+
+    # 5. Просто «X ₽»
     m = re.search(r"\b(\d{2,6})\s*(?:₽|р|руб)\b", low)
-    if m: return f"{m.group(1)} ₽"
+    if m:
+        return f"{m.group(1)} ₽"
+
     return None
 
 def download_image(url: str, channel: str) -> Optional[str]:
@@ -237,7 +313,7 @@ def harvest_preview(channels: List[str], rules: dict) -> List[Event]:
 
                 title = clean_title(title_from_text(text), rules)
                 desc = make_desc(text)
-                price = price_from_text(text) or "—"
+                price = price_from_text(text)
                 venue = extract_venue(text)
 
                 ev = Event(
@@ -268,7 +344,7 @@ def save_outputs(events: List[Event]):
     payload = [asdict(e) for e in events]
     (DATA_DIR / "events.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), "utf-8")
     Path("events.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), "utf-8")
-    logging.info(f"Saved {len(events)} events → data/events.json и events.json")
+    logging.info(f"Saved {len(events)} events")
 
 def run_once():
     logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
