@@ -175,6 +175,7 @@
             font-weight: 600;
         }
 
+        /* ─── Оверлей ─── */
         .overlay {
             position: fixed;
             inset: 0;
@@ -187,6 +188,7 @@
         }
         .overlay.active { opacity: 1; pointer-events: auto; }
 
+        /* ─── Сайдбар ─── */
         .sidebar {
             position: fixed;
             inset: 0;
@@ -210,6 +212,7 @@
             flex-direction: row;
         }
 
+        /* ─── Слева: картинка ─── */
         .card-3d-wrap {
             flex: 0 0 50%;
             display: flex;
@@ -227,8 +230,9 @@
             height: 100%;
             border-radius: 16px;
             background: #1a1a1a;
-            background-size: cover;
-            background-position: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             box-shadow:
                 0 30px 60px rgba(0,0,0,0.6),
                 0 0 0 1px rgba(255,255,255,0.08) inset;
@@ -236,14 +240,26 @@
             transition: transform 0.1s ease-out;
             cursor: grab;
             position: relative;
+            overflow: hidden;
         }
         .card-3d:active { cursor: grabbing; }
+        .card-3d img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            display: block;
+            user-select: none;
+            -webkit-user-drag: none;
+            pointer-events: none;
+        }
         .card-3d::after {
             content: '';
             position: absolute;
             inset: 0;
             border-radius: 16px;
-            background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 50%);
+            background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 50%);
             pointer-events: none;
         }
 
@@ -266,6 +282,32 @@
         .sidebar.active .card-3d-hint { opacity: 1; }
         .card-3d-wrap.touched .card-3d-hint { opacity: 0; }
 
+        /* ─── Плашка «Загрузка» внутри 3D-карточки ─── */
+        .card-3d-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            background: #1a1a1a;
+            color: var(--muted);
+            font-size: 0.9rem;
+            z-index: 2;
+        }
+        .card-3d-loading.hidden { display: none; }
+        .spinner {
+            width: 44px;
+            height: 44px;
+            border: 4px solid rgba(196, 255, 77, 0.2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ─── Правая часть: текст ─── */
         .card-info {
             flex: 1;
             display: flex;
@@ -274,6 +316,7 @@
             border-left: 1px solid var(--border);
             background: #0f0f0f;
             height: 100vh;
+            position: relative;
         }
         .card-info-header {
             display: flex;
@@ -318,6 +361,23 @@
         .card-info-scroll::-webkit-scrollbar { width: 8px; }
         .card-info-scroll::-webkit-scrollbar-track { background: transparent; }
         .card-info-scroll::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+
+        /* ─── Плашка «Загрузка» внутри текста ─── */
+        .card-info-loading {
+            position: absolute;
+            inset: 0;
+            top: 63px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            background: #0f0f0f;
+            color: var(--muted);
+            font-size: 0.9rem;
+            z-index: 2;
+        }
+        .card-info-loading.hidden { display: none; }
 
         .card-info-tag {
             display: inline-block;
@@ -419,6 +479,7 @@
             .card-3d-wrap { flex: 0 0 45%; height: 45vh; padding: 10px; }
             .card-3d { border-radius: 12px; }
             .card-info { height: 55vh; border-left: none; border-top: 1px solid var(--border); }
+            .card-info-loading { top: 55px; }
             .card-info-title { font-size: 1.3rem; }
             .card-info-scroll { padding: 20px; }
             h1 { font-size: 1.5rem; }
@@ -471,7 +532,12 @@
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-inner">
             <div class="card-3d-wrap" id="card-3d-wrap">
-                <div class="card-3d" id="card-3d"></div>
+                <div class="card-3d" id="card-3d">
+                    <div class="card-3d-loading" id="card-3d-loading">
+                        <div class="spinner"></div>
+                        <span>Загрузка картинки...</span>
+                    </div>
+                </div>
                 <div class="card-3d-hint">👆 Поверни карточку</div>
             </div>
             <div class="card-info">
@@ -480,6 +546,10 @@
                     <button class="card-info-close" id="sidebar-close">×</button>
                 </div>
                 <div class="card-info-scroll" id="card-info-content"></div>
+                <div class="card-info-loading" id="card-info-loading">
+                    <div class="spinner"></div>
+                    <span>Загрузка события...</span>
+                </div>
             </div>
         </div>
     </aside>
@@ -494,7 +564,7 @@
         let allEvents = [];
         let aiReady = false;
 
-        // ─── Погода Уфы (сначала wttr.in, потом Open-Meteo) ───
+        // ─── Погода ───
         async function loadWeather() {
             const tempEl = document.getElementById('weather-temp');
             const descEl = document.getElementById('weather-desc');
@@ -515,12 +585,8 @@
                 392: '⛈️', 395: '🌨️',
             };
 
-            // 1. wttr.in
             try {
-                const res = await fetch(
-                    'https://wttr.in/Ufa?format=j1',
-                    { signal: AbortSignal.timeout(8000) }
-                );
+                const res = await fetch('https://wttr.in/Ufa?format=j1', { signal: AbortSignal.timeout(8000) });
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
                 const current = data.current_condition[0];
@@ -537,7 +603,6 @@
                 console.warn('wttr.in failed, trying Open-Meteo...', err);
             }
 
-            // 2. Open-Meteo
             try {
                 const res = await fetch(
                     'https://api.open-meteo.com/v1/forecast?latitude=54.7388&longitude=55.9721&current=temperature_2m,weather_code&timezone=Asia%2FYekaterinburg',
@@ -572,7 +637,7 @@
         loadWeather();
         setInterval(loadWeather, 30 * 60 * 1000);
 
-        // ─── AI-модель ───
+        // ─── AI ───
         async function initAI() {
             const statusEl = document.getElementById('ai-status');
             const inputEl = document.getElementById('ai-query');
@@ -580,17 +645,10 @@
 
             try {
                 statusEl.textContent = 'Загрузка модели (33 МБ)...';
-
-                extractor = await pipeline(
-                    'feature-extraction',
-                    'Xenova/all-MiniLM-L6-v2',
-                    { dtype: 'q8' }
-                );
-
+                extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { dtype: 'q8' });
                 statusEl.textContent = 'Готово! Спрашивай.';
                 inputEl.disabled = false;
                 aiReady = true;
-
                 await indexEvents();
             } catch (err) {
                 console.error('AI init error:', err);
@@ -600,19 +658,12 @@
 
         async function indexEvents() {
             if (!extractor || allEvents.length === 0) return;
-
             const statusEl = document.getElementById('ai-status');
             if (statusEl) statusEl.textContent = 'Индексация событий...';
-
             eventEmbeddings = [];
-
             for (const event of allEvents) {
                 const text = `${event.title || ''} ${event.desc || ''} ${event.venue || ''}`.trim();
-                if (!text) {
-                    eventEmbeddings.push(null);
-                    continue;
-                }
-
+                if (!text) { eventEmbeddings.push(null); continue; }
                 try {
                     const output = await extractor(text, { pooling: 'mean', normalize: true });
                     eventEmbeddings.push(Array.from(output.data));
@@ -621,7 +672,6 @@
                     eventEmbeddings.push(null);
                 }
             }
-
             if (statusEl) statusEl.textContent = `Готово! Проиндексировано ${eventEmbeddings.filter(e => e).length} событий.`;
         }
 
@@ -637,26 +687,18 @@
         }
 
         async function aiSearch(query) {
-            if (!extractor || !query.trim()) {
-                renderAll();
-                return;
-            }
-
+            if (!extractor || !query.trim()) { renderAll(); return; }
             const statusEl = document.getElementById('ai-status');
             if (statusEl) statusEl.textContent = 'Ищу...';
-
             try {
                 const output = await extractor(query, { pooling: 'mean', normalize: true });
                 const queryEmbedding = Array.from(output.data);
-
                 const scored = allEvents.map((event, idx) => ({
                     event,
                     score: eventEmbeddings[idx] ? cosineSimilarity(queryEmbedding, eventEmbeddings[idx]) : 0
                 }));
-
                 scored.sort((a, b) => b.score - a.score);
                 const relevant = scored.filter(s => s.score > 0.2);
-
                 if (statusEl) statusEl.textContent = `Найдено ${relevant.length} событий`;
                 renderWithScores(relevant);
             } catch (err) {
@@ -665,7 +707,7 @@
             }
         }
 
-        // ─── Логика сайта ───
+        // ─── Логика ───
         let currentFilter = 'all';
         let searchQuery = '';
 
@@ -675,14 +717,11 @@
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 allEvents = await res.json();
                 render();
-
                 if (aiReady) await indexEvents();
             } catch (err) {
                 console.error('LOAD ERROR:', err);
                 const feed = document.getElementById('feed');
-                if (feed) {
-                    feed.innerHTML = '<div class="empty">Ошибка загрузки данных: ' + err.message + '</div>';
-                }
+                if (feed) feed.innerHTML = '<div class="empty">Ошибка загрузки данных: ' + err.message + '</div>';
             }
         }
 
@@ -811,57 +850,90 @@
             window.currentFiltered = scored.map(s => s.event);
         }
 
-        function renderAll() {
-            render();
-        }
+        function renderAll() { render(); }
 
+        // ─── Сайдбар с плашками загрузки ───
         function openSidebar(index) {
             const e = window.currentFiltered[index];
             if (!e) return;
 
             const content = document.getElementById('card-info-content');
             const card3d = document.getElementById('card-3d');
+            const loadingImg = document.getElementById('card-3d-loading');
+            const loadingInfo = document.getElementById('card-info-loading');
             if (!content || !card3d) return;
 
-            const isFree = (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод');
+            // Показываем плашки загрузки
+            if (loadingImg) loadingImg.classList.remove('hidden');
+            if (loadingInfo) loadingInfo.classList.remove('hidden');
 
-            if (e.image) {
-                card3d.style.backgroundImage = `url('${e.image}')`;
-            } else {
-                card3d.style.backgroundImage = 'linear-gradient(135deg, #1a1a1a, #2a2a2a)';
-            }
+            // Очищаем старую картинку
+            const oldImg = card3d.querySelector('img');
+            if (oldImg) oldImg.remove();
 
-            const tagHtml = e.source ? `<div class="card-info-tag">@${escapeHtml(e.source)}</div>` : '';
-            const fullText = e.raw || e.desc || 'Описание отсутствует.';
-
-            content.innerHTML = `
-                ${tagHtml}
-                <h1 class="card-info-title">${escapeHtml(e.title) || 'Без названия'}</h1>
-                <div class="card-info-meta">
-                    <div class="card-info-meta-item">
-                        <span class="icon">📅</span>
-                        <div><div class="label">Дата и время</div><div class="value">${formatDate(e)}</div></div>
-                    </div>
-                    <div class="card-info-meta-item">
-                        <span class="icon">📍</span>
-                        <div><div class="label">Место</div><div class="value">${escapeHtml(e.venue) || 'Уточняется'}</div></div>
-                    </div>
-                    <div class="card-info-meta-item">
-                        <span class="icon">💰</span>
-                        <div><div class="label">Цена</div><div class="value ${isFree ? 'price-free' : ''}">${escapeHtml(e.price) || 'Уточняется'}</div></div>
-                    </div>
-                </div>
-                <div class="card-info-text">${escapeHtml(fullText)}</div>
-                <div class="card-info-actions">
-                    ${e.source_link ? `<a class="card-info-btn primary" href="${e.source_link}" target="_blank" rel="noopener">📱 Открыть в Telegram</a>` : ''}
-                    <button class="card-info-btn secondary" onclick="closeSidebar()">Закрыть</button>
-                </div>
-            `;
-
+            // Открываем сайдбар сразу
             resetRotation();
             document.getElementById('sidebar').classList.add('active');
             document.getElementById('overlay').classList.add('active');
             document.body.style.overflow = 'hidden';
+
+            // Загружаем картинку
+            if (e.image) {
+                const img = new Image();
+                img.onload = () => {
+                    if (loadingImg) loadingImg.classList.add('hidden');
+                    card3d.insertBefore(img, card3d.firstChild);
+                };
+                img.onerror = () => {
+                    if (loadingImg) loadingImg.classList.add('hidden');
+                    const errDiv = document.createElement('div');
+                    errDiv.style.cssText = 'color: #666; font-size: 0.9rem; text-align: center; padding: 20px;';
+                    errDiv.textContent = 'Картинка не загрузилась';
+                    card3d.insertBefore(errDiv, card3d.firstChild);
+                };
+                img.alt = e.title || '';
+                img.src = e.image;
+            } else {
+                setTimeout(() => {
+                    if (loadingImg) loadingImg.classList.add('hidden');
+                    const placeholder = document.createElement('div');
+                    placeholder.style.cssText = 'color: #666; font-size: 2rem;';
+                    placeholder.textContent = '🎫';
+                    card3d.insertBefore(placeholder, card3d.firstChild);
+                }, 300);
+            }
+
+            // Заполняем текст (небольшая задержка, чтобы плашка мелькнула)
+            const isFree = (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод');
+            const tagHtml = e.source ? `<div class="card-info-tag">@${escapeHtml(e.source)}</div>` : '';
+            const fullText = e.raw || e.desc || 'Описание отсутствует.';
+
+            setTimeout(() => {
+                content.innerHTML = `
+                    ${tagHtml}
+                    <h1 class="card-info-title">${escapeHtml(e.title) || 'Без названия'}</h1>
+                    <div class="card-info-meta">
+                        <div class="card-info-meta-item">
+                            <span class="icon">📅</span>
+                            <div><div class="label">Дата и время</div><div class="value">${formatDate(e)}</div></div>
+                        </div>
+                        <div class="card-info-meta-item">
+                            <span class="icon">📍</span>
+                            <div><div class="label">Место</div><div class="value">${escapeHtml(e.venue) || 'Уточняется'}</div></div>
+                        </div>
+                        <div class="card-info-meta-item">
+                            <span class="icon">💰</span>
+                            <div><div class="label">Цена</div><div class="value ${isFree ? 'price-free' : ''}">${escapeHtml(e.price) || 'Уточняется'}</div></div>
+                        </div>
+                    </div>
+                    <div class="card-info-text">${escapeHtml(fullText)}</div>
+                    <div class="card-info-actions">
+                        ${e.source_link ? `<a class="card-info-btn primary" href="${e.source_link}" target="_blank" rel="noopener">📱 Открыть в Telegram</a>` : ''}
+                        <button class="card-info-btn secondary" onclick="closeSidebar()">Закрыть</button>
+                    </div>
+                `;
+                if (loadingInfo) loadingInfo.classList.add('hidden');
+            }, 150);
         }
 
         function closeSidebar() {
@@ -936,11 +1008,8 @@
 
         document.getElementById('ai-query').addEventListener('input', (e) => {
             const query = e.target.value;
-            if (query.length > 3) {
-                aiSearch(query);
-            } else if (query.length === 0) {
-                renderAll();
-            }
+            if (query.length > 3) aiSearch(query);
+            else if (query.length === 0) renderAll();
         });
 
         document.querySelectorAll('.filters button').forEach(btn => {
@@ -952,7 +1021,6 @@
             });
         });
 
-        // Делаем функции доступными для onclick в HTML
         window.openSidebar = openSidebar;
         window.closeSidebar = closeSidebar;
 
