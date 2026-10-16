@@ -1,36 +1,60 @@
 import json
-import requests
 from datetime import datetime, timedelta
 
-# MCP сервер для запроса. Он публичный, без ключей.
-MCP_URL = "https://spontanno.space/mcp"
-
-# Простой вызов. В реальности MCP требует особый формат JSON-RPC,
-# но для примера логики сойдёт и такой запрос (в рабочем варианте нужен клиент MCP).
-# Здесь показываю суть: мы получаем список событий.
-
 def fetch_ufa_events():
-    # Это упрощение. Для продакшена нужно использовать MCP-клиент.
-    # Логика: спрашиваем у сервера, что есть в Уфе.
-    # В ответ приходит JSON с событиями.
+    """
+    Пока здесь тестовые данные с картинками.
+    Позже заменим на реальный источник.
+    """
+    today = datetime.now()
     
-    # Пример того, что мы могли бы получить (заглушка для теста)
     events = [
-        {"id": 1, "title": "АйдаФест", "category": "фестиваль", "price": "бесплатно", "date": "2026-08-29", "place": "Арт-Квадрат"},
-        {"id": 2, "title": "Яшьлек Party", "category": "вечеринка", "price": "платно", "date": "2026-08-27", "place": "Огни Уфы"},
+        {
+            "title": "АйдаФест",
+            "category": "фестиваль",
+            "date": (today + timedelta(days=3)).strftime("%Y-%m-%d"),
+            "place": "Арт-Квадрат",
+            "price": "бесплатно",
+            "image": "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=600&q=80"
+        },
+        {
+            "title": "Яшьлек Party",
+            "category": "вечеринка",
+            "date": (today + timedelta(days=1)).strftime("%Y-%m-%d"),
+            "place": "Огни Уфы",
+            "price": "платно",
+            "image": "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&q=80"
+        },
+        {
+            "title": "Инди-концерт в подвале",
+            "category": "музыка",
+            "date": (today + timedelta(days=5)).strftime("%Y-%m-%d"),
+            "place": "Бар «Синяя борода»",
+            "price": "500 ₽",
+            "image": "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?w=600&q=80"
+        },
+        {
+            "title": "Выставка современного искусства",
+            "category": "арт",
+            "date": (today + timedelta(days=2)).strftime("%Y-%m-%d"),
+            "place": "Центр современного искусства",
+            "price": "бесплатно",
+            "image": "https://images.unsplash.com/photo-1531243269054-5ebf6f34081e?w=600&q=80"
+        }
     ]
+    
     return events
 
+
 def filter_for_millennials(events):
-    # Оставляем то, что интересно: бесплатное, фестивали, вечеринки, музыка
-    keywords = ['фестиваль', 'вечеринка', 'музыка', 'арт', 'бесплатно', 'дизайн']
+    keywords = ['фестиваль', 'вечеринка', 'музыка', 'арт', 'бесплатно', 'дизайн', 'лекция', 'стендап']
     filtered = []
     for e in events:
-        # Простая проверка по названию или категории
-        text = (e['title'] + ' ' + e['category']).lower()
+        text = (e.get('title', '') + ' ' + e.get('category', '')).lower()
         if any(kw in text for kw in keywords):
             filtered.append(e)
     return filtered
+
 
 if __name__ == "__main__":
     raw = fetch_ufa_events()
