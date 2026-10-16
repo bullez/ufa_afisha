@@ -453,6 +453,7 @@
                 <span class="weather-desc" id="weather-desc">Загрузка...</span>
             </div>
         </div>
+        <div id="count"></div>
     </header>
 
     <!-- AI-Поиск -->
@@ -514,12 +515,13 @@
             const tempEl = document.getElementById('weather-temp');
             const descEl = document.getElementById('weather-desc');
             const iconEl = document.getElementById('weather-icon');
+            if (!tempEl || !descEl || !iconEl) return;
 
             // Пробуем Open-Meteo
             try {
                 const res = await fetch(
                     'https://api.open-meteo.com/v1/forecast?latitude=54.7388&longitude=55.9721&current=temperature_2m,weather_code&timezone=Asia%2FYekaterinburg',
-                    { signal: AbortSignal.timeout(5000) }
+                    { signal: AbortSignal.timeout(8000) }
                 );
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
@@ -550,7 +552,7 @@
             try {
                 const res = await fetch(
                     'https://wttr.in/Ufa?format=j1',
-                    { signal: AbortSignal.timeout(5000) }
+                    { signal: AbortSignal.timeout(8000) }
                 );
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
@@ -590,6 +592,7 @@
         async function initAI() {
             const statusEl = document.getElementById('ai-status');
             const inputEl = document.getElementById('ai-query');
+            if (!statusEl || !inputEl) return;
 
             try {
                 statusEl.textContent = 'Загрузка модели (33 МБ)...';
@@ -615,7 +618,7 @@
             if (!extractor || allEvents.length === 0) return;
 
             const statusEl = document.getElementById('ai-status');
-            statusEl.textContent = 'Индексация событий...';
+            if (statusEl) statusEl.textContent = 'Индексация событий...';
 
             eventEmbeddings = [];
 
@@ -635,7 +638,7 @@
                 }
             }
 
-            statusEl.textContent = `Готово! Проиндексировано ${eventEmbeddings.filter(e => e).length} событий.`;
+            if (statusEl) statusEl.textContent = `Готово! Проиндексировано ${eventEmbeddings.filter(e => e).length} событий.`;
         }
 
         function cosineSimilarity(a, b) {
@@ -656,7 +659,7 @@
             }
 
             const statusEl = document.getElementById('ai-status');
-            statusEl.textContent = 'Ищу...';
+            if (statusEl) statusEl.textContent = 'Ищу...';
 
             try {
                 const output = await extractor(query, { pooling: 'mean', normalize: true });
@@ -671,11 +674,11 @@
 
                 const relevant = scored.filter(s => s.score > 0.2);
 
-                statusEl.textContent = `Найдено ${relevant.length} событий`;
+                if (statusEl) statusEl.textContent = `Найдено ${relevant.length} событий`;
                 renderWithScores(relevant);
             } catch (err) {
                 console.error('AI search error:', err);
-                statusEl.textContent = 'Ошибка поиска';
+                if (statusEl) statusEl.textContent = 'Ошибка поиска';
             }
         }
 
@@ -692,9 +695,11 @@
 
                 if (aiReady) await indexEvents();
             } catch (err) {
-                document.getElementById('feed').innerHTML =
-                    '<div class="empty">Ошибка загрузки данных. Проверь events.json.</div>';
-                console.error(err);
+                console.error('LOAD ERROR:', err);
+                const feed = document.getElementById('feed');
+                if (feed) {
+                    feed.innerHTML = '<div class="empty">Ошибка загрузки данных: ' + err.message + '</div>';
+                }
             }
         }
 
@@ -754,57 +759,65 @@
         }
 
         function render() {
-            const feed = document.getElementById('feed');
-            const countEl = document.getElementById('count');
+            try {
+                const feed = document.getElementById('feed');
+                const countEl = document.getElementById('count');
+                if (!feed) return;
 
-            let filtered = allEvents;
+                let filtered = allEvents;
 
-            if (currentFilter === 'free') {
-                filtered = filtered.filter(e => (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод'));
-            } else if (currentFilter === 'party') {
-                filtered = filtered.filter(e => {
-                    const t = ((e.title || '') + ' ' + (e.desc || '')).toLowerCase();
-                    return t.includes('вечерин') || t.includes('party') || t.includes('тусов') || t.includes('рейв');
-                });
-            } else if (currentFilter === 'music') {
-                filtered = filtered.filter(e => {
-                    const t = ((e.title || '') + ' ' + (e.desc || '')).toLowerCase();
-                    return t.includes('концерт') || t.includes('музык') || t.includes('джаз') || t.includes('dj');
-                });
-            } else if (currentFilter === 'art') {
-                filtered = filtered.filter(e => {
-                    const t = ((e.title || '') + ' ' + (e.desc || '')).toLowerCase();
-                    return t.includes('выстав') || t.includes('арт') || t.includes('галере') || t.includes('музей');
-                });
-            } else if (currentFilter === 'today') {
-                filtered = filtered.filter(isToday);
+                if (currentFilter === 'free') {
+                    filtered = filtered.filter(e => (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод'));
+                } else if (currentFilter === 'party') {
+                    filtered = filtered.filter(e => {
+                        const t = ((e.title || '') + ' ' + (e.desc || '')).toLowerCase();
+                        return t.includes('вечерин') || t.includes('party') || t.includes('тусов') || t.includes('рейв');
+                    });
+                } else if (currentFilter === 'music') {
+                    filtered = filtered.filter(e => {
+                        const t = ((e.title || '') + ' ' + (e.desc || '')).toLowerCase();
+                        return t.includes('концерт') || t.includes('музык') || t.includes('джаз') || t.includes('dj');
+                    });
+                } else if (currentFilter === 'art') {
+                    filtered = filtered.filter(e => {
+                        const t = ((e.title || '') + ' ' + (e.desc || '')).toLowerCase();
+                        return t.includes('выстав') || t.includes('арт') || t.includes('галере') || t.includes('музей');
+                    });
+                } else if (currentFilter === 'today') {
+                    filtered = filtered.filter(isToday);
+                }
+
+                if (searchQuery) {
+                    const q = searchQuery.toLowerCase();
+                    filtered = filtered.filter(e => {
+                        const text = ((e.title || '') + ' ' + (e.desc || '') + ' ' + (e.venue || '')).toLowerCase();
+                        return text.includes(q);
+                    });
+                }
+
+                filtered = sortEvents(filtered);
+                if (countEl) countEl.textContent = filtered.length + ' событий';
+
+                if (filtered.length === 0) {
+                    feed.innerHTML = '<div class="empty">Ничего не найдено. Попробуй другой фильтр.</div>';
+                    return;
+                }
+
+                feed.innerHTML = filtered.map((e, idx) => renderCard(e, idx)).join('');
+                window.currentFiltered = filtered;
+            } catch (err) {
+                console.error('RENDER ERROR:', err);
+                const feed = document.getElementById('feed');
+                if (feed) feed.innerHTML = '<div class="empty">Ошибка рендера: ' + err.message + '</div>';
             }
-
-            if (searchQuery) {
-                const q = searchQuery.toLowerCase();
-                filtered = filtered.filter(e => {
-                    const text = ((e.title || '') + ' ' + (e.desc || '') + ' ' + (e.venue || '')).toLowerCase();
-                    return text.includes(q);
-                });
-            }
-
-            filtered = sortEvents(filtered);
-            countEl.textContent = filtered.length + ' событий';
-
-            if (filtered.length === 0) {
-                feed.innerHTML = '<div class="empty">Ничего не найдено. Попробуй другой фильтр.</div>';
-                return;
-            }
-
-            feed.innerHTML = filtered.map((e, idx) => renderCard(e, idx)).join('');
-            window.currentFiltered = filtered;
         }
 
         function renderWithScores(scored) {
             const feed = document.getElementById('feed');
             const countEl = document.getElementById('count');
+            if (!feed) return;
 
-            countEl.textContent = scored.length + ' событий';
+            if (countEl) countEl.textContent = scored.length + ' событий';
 
             if (scored.length === 0) {
                 feed.innerHTML = '<div class="empty">Ничего не найдено по смыслу. Попробуй другой запрос.</div>';
@@ -825,6 +838,8 @@
 
             const content = document.getElementById('card-info-content');
             const card3d = document.getElementById('card-3d');
+            if (!content || !card3d) return;
+
             const isFree = (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод');
 
             if (e.image) {
@@ -881,11 +896,13 @@
         let startRotX = 0, startRotY = 0;
 
         function applyRotation() {
+            if (!card3d) return;
             card3d.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
         }
 
         function resetRotation() {
             rotX = 0; rotY = 0;
+            if (!card3d) return;
             card3d.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.3, 0.64, 1)';
             applyRotation();
             setTimeout(() => { card3d.style.transition = 'transform 0.1s ease-out'; }, 600);
@@ -895,8 +912,8 @@
             isDragging = true;
             startX = x; startY = y;
             startRotX = rotX; startRotY = rotY;
-            card3dWrap.classList.add('touched');
-            card3d.style.transition = 'none';
+            if (card3dWrap) card3dWrap.classList.add('touched');
+            if (card3d) card3d.style.transition = 'none';
         }
 
         function onMove(x, y) {
@@ -910,17 +927,20 @@
 
         function onEnd() {
             isDragging = false;
+            if (!card3d) return;
             card3d.style.transition = 'transform 0.6s cubic-bezier(0.34, 1.3, 0.64, 1)';
             rotX = 0; rotY = 0;
             applyRotation();
         }
 
-        card3d.addEventListener('mousedown', (e) => { onStart(e.clientX, e.clientY); e.preventDefault(); });
-        document.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
-        document.addEventListener('mouseup', onEnd);
-        card3d.addEventListener('touchstart', (e) => { const t = e.touches[0]; onStart(t.clientX, t.clientY); }, { passive: true });
-        card3d.addEventListener('touchmove', (e) => { const t = e.touches[0]; onMove(t.clientX, t.clientY); }, { passive: true });
-        card3d.addEventListener('touchend', onEnd);
+        if (card3d) {
+            card3d.addEventListener('mousedown', (e) => { onStart(e.clientX, e.clientY); e.preventDefault(); });
+            document.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+            document.addEventListener('mouseup', onEnd);
+            card3d.addEventListener('touchstart', (e) => { const t = e.touches[0]; onStart(t.clientX, t.clientY); }, { passive: true });
+            card3d.addEventListener('touchmove', (e) => { const t = e.touches[0]; onMove(t.clientX, t.clientY); }, { passive: true });
+            card3d.addEventListener('touchend', onEnd);
+        }
 
         document.getElementById('sidebar-close').addEventListener('click', closeSidebar);
         document.getElementById('overlay').addEventListener('click', closeSidebar);
