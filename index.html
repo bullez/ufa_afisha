@@ -20,7 +20,7 @@
             color: var(--text);
             line-height: 1.5;
             padding: 20px;
-            max-width: 1100px;
+            max-width: 1200px;
             margin: 0 auto;
         }
         header {
@@ -37,7 +37,7 @@
         .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
         .filters button {
             background: transparent; color: var(--muted);
-            border: 1px solid var(--border); padding: 8px 16px;
+            border: 1px solid var(--border); padding: 8px 18px;
             border-radius: 100px; cursor: pointer; font-size: 0.9rem;
             transition: all 0.2s;
         }
@@ -48,54 +48,55 @@
         }
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
             gap: 20px;
         }
         .card {
             background: var(--card); border: 1px solid var(--border);
-            border-radius: 18px; overflow: hidden;
-            transition: transform 0.2s, border-color 0.2s;
+            border-radius: 20px; overflow: hidden;
+            transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
             display: flex; flex-direction: column;
         }
-        .card:hover { transform: translateY(-4px); border-color: var(--accent); }
+        .card:hover {
+            transform: translateY(-6px);
+            border-color: var(--accent);
+            box-shadow: 0 12px 40px rgba(196, 255, 77, 0.08);
+        }
         .card-image {
             width: 100%; aspect-ratio: 4/3;
-            background: linear-gradient(135deg, #1f1f1f, #2a2a2a);
+            background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
             background-size: cover; background-position: center;
             position: relative;
         }
-        .card-image::after {
-            content: ''; position: absolute; inset: 0;
-            background: linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.5));
-        }
-        .card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
+        .card-body { padding: 18px; flex: 1; display: flex; flex-direction: column; }
         .card-tag {
             display: inline-block; font-size: 0.7rem; text-transform: uppercase;
             letter-spacing: 1px; color: var(--accent);
-            margin-bottom: 8px; font-weight: 600;
+            margin-bottom: 8px; font-weight: 700;
         }
         .card h3 {
-            font-size: 1.05rem; margin-bottom: 10px;
-            line-height: 1.35;
+            font-size: 1.05rem; margin-bottom: 12px;
+            line-height: 1.35; font-weight: 700;
             display: -webkit-box; -webkit-line-clamp: 3;
             -webkit-box-orient: vertical; overflow: hidden;
         }
         .card-meta {
             font-size: 0.85rem; color: var(--muted);
-            margin-bottom: 4px;
+            margin-bottom: 5px; display: flex; align-items: center; gap: 6px;
         }
         .card-price {
-            margin-top: auto; padding-top: 12px;
-            font-weight: 700; font-size: 0.95rem;
+            margin-top: auto; padding-top: 14px;
+            font-weight: 800; font-size: 1rem;
         }
         .card-price.free { color: var(--accent); }
         .card-link {
-            display: inline-block; margin-top: 10px;
+            display: inline-block; margin-top: 12px;
             font-size: 0.85rem; color: var(--accent);
-            text-decoration: none; font-weight: 600;
+            text-decoration: none; font-weight: 700;
+            transition: opacity 0.2s;
         }
-        .card-link:hover { text-decoration: underline; }
-        .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+        .card-link:hover { opacity: 0.7; }
+        .empty { text-align: center; padding: 80px 20px; color: var(--muted); grid-column: 1/-1; }
         @media (max-width: 600px) {
             h1 { font-size: 1.5rem; }
             .grid { grid-template-columns: 1fr; }
@@ -114,6 +115,7 @@
         <button data-filter="party">Тусовки</button>
         <button data-filter="music">Музыка</button>
         <button data-filter="art">Арт</button>
+        <button data-filter="today">Сегодня</button>
     </div>
 
     <div id="feed" class="grid"></div>
@@ -135,18 +137,20 @@
         }
 
         function formatDate(e) {
-            // Склеиваем дату и время из полей нового формата
             const parts = [];
             if (e.date_text) parts.push(e.date_text);
             if (e.time_text) parts.push(e.time_text);
             if (parts.length) return parts.join(' · ');
-            if (e.start) {
-                try {
-                    const d = new Date(e.start);
-                    return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-                } catch (_) {}
-            }
             return 'Дата уточняется';
+        }
+
+        function isToday(e) {
+            if (!e.date_text) return false;
+            const today = new Date();
+            const dd = String(today.getDate()).padStart(2, '0');
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const yyyy = today.getFullYear();
+            return e.date_text === `${dd}.${mm}.${yyyy}`;
         }
 
         function render() {
@@ -171,6 +175,8 @@
                     const t = ((e.title || '') + ' ' + (e.desc || '')).toLowerCase();
                     return t.includes('выстав') || t.includes('арт') || t.includes('галере') || t.includes('музей');
                 });
+            } else if (currentFilter === 'today') {
+                filtered = allEvents.filter(isToday);
             }
 
             countEl.textContent = filtered.length + ' событий';
@@ -181,9 +187,7 @@
             }
 
             feed.innerHTML = filtered.map(e => {
-                const img = e.image
-                    ? `style="background-image: url('${e.image}')"`
-                    : '';
+                const img = e.image ? `style="background-image: url('${e.image}')"` : '';
                 const priceClass = (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод') ? 'free' : '';
                 const link = e.source_link ? `<a class="card-link" href="${e.source_link}" target="_blank" rel="noopener">Открыть пост →</a>` : '';
                 const source = e.source ? `<div class="card-tag">@${e.source}</div>` : '';
