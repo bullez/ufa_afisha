@@ -6,149 +6,80 @@
     <title>Уфа для своих — афиша</title>
     <style>
         :root[data-theme="dark"] {
-            --bg: #0a0a0a;
-            --card: #141414;
-            --border: #262626;
-            --text: #f5f5f5;
-            --muted: #a3a3a3;
-            --accent: #c4ff4d;
-            --accent-contrast: #000;
+            --bg: #0a0a0a; --card: #141414; --border: #262626;
+            --text: #f5f5f5; --muted: #a3a3a3; --accent: #c4ff4d; --accent-contrast: #000;
         }
         :root[data-theme="light"] {
-            --bg: #f5f5f7;
-            --card: #ffffff;
-            --border: #e5e5ea;
-            --text: #1d1d1f;
-            --muted: #6e6e73;
-            --accent: #007aff;
-            --accent-contrast: #ffffff;
+            --bg: #f5f5f7; --card: #ffffff; --border: #e5e5ea;
+            --text: #1d1d1f; --muted: #6e6e73; --accent: #007aff; --accent-contrast: #ffffff;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            line-height: 1.5;
-            padding: 20px;
-            padding-bottom: 80px;
-            max-width: 1200px;
-            margin: 0 auto;
-            -webkit-font-smoothing: antialiased;
-            overflow-x: hidden;
+            background: var(--bg); color: var(--text); line-height: 1.5;
+            padding: 20px; padding-bottom: 80px; max-width: 1200px; margin: 0 auto;
+            -webkit-font-smoothing: antialiased; overflow-x: hidden;
             transition: background 0.3s, color 0.3s;
         }
         header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 1px solid var(--border);
-            flex-wrap: wrap;
-            gap: 12px;
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 24px; padding-bottom: 16px;
+            border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 12px;
         }
         h1 { font-size: 2rem; font-weight: 800; letter-spacing: -1px; }
         h1 span { color: var(--accent); }
-
         .header-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .theme-toggle {
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            width: 42px;
-            height: 42px;
-            cursor: pointer;
-            font-size: 1.2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-            color: var(--text);
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: 12px; width: 42px; height: 42px; cursor: pointer;
+            font-size: 1.2rem; display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s; color: var(--text);
         }
         .theme-toggle:hover { border-color: var(--accent); }
-
         .weather-block {
-            display: flex;
-            gap: 8px;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 8px 12px;
-            font-size: 0.9rem;
+            display: flex; gap: 8px; background: var(--card);
+            border: 1px solid var(--border); border-radius: 14px;
+            padding: 8px 12px; font-size: 0.9rem;
         }
         .weather-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-            padding: 0 8px;
-            border-right: 1px solid var(--border);
-            min-width: 60px;
+            display: flex; flex-direction: column; align-items: center; gap: 2px;
+            padding: 0 8px; border-right: 1px solid var(--border); min-width: 60px;
         }
         .weather-item:last-child { border-right: none; }
         .weather-label { font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
         .weather-icon { font-size: 1.2rem; line-height: 1; }
         .weather-temp { font-size: 0.9rem; font-weight: 800; color: var(--accent); }
-
         #count { color: var(--muted); font-size: 0.9rem; font-weight: 500; }
-
         .ai-search {
             background: linear-gradient(135deg, rgba(196, 255, 77, 0.08) 0%, rgba(196, 255, 77, 0.02) 100%);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 24px;
+            border: 1px solid var(--border); border-radius: 20px; padding: 20px; margin-bottom: 24px;
         }
         :root[data-theme="light"] .ai-search {
             background: linear-gradient(135deg, rgba(0, 122, 255, 0.08) 0%, rgba(0, 122, 255, 0.02) 100%);
         }
-        .ai-search-header {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 12px;
-        }
+        .ai-search-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
         .ai-search-header .icon { font-size: 1.4rem; }
         .ai-search-header h2 { font-size: 1rem; font-weight: 700; color: var(--accent); }
         .ai-search-header .status { font-size: 0.75rem; color: var(--muted); margin-left: auto; }
         .ai-search input {
-            width: 100%;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 14px 18px;
-            color: var(--text);
-            font-size: 1rem;
-            outline: none;
-            transition: border-color 0.2s;
+            width: 100%; background: var(--card); border: 1px solid var(--border);
+            border-radius: 14px; padding: 14px 18px; color: var(--text);
+            font-size: 1rem; outline: none; transition: border-color 0.2s;
         }
         .ai-search input:focus { border-color: var(--accent); }
         .ai-search input::placeholder { color: var(--muted); }
         .ai-search input:disabled { opacity: 0.5; cursor: not-allowed; }
-
         .search-wrap { margin-bottom: 20px; position: relative; }
         .search-wrap input {
-            width: 100%;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 14px;
-            padding: 14px 18px 14px 44px;
-            color: var(--text);
-            font-size: 1rem;
-            outline: none;
-            transition: border-color 0.2s;
+            width: 100%; background: var(--card); border: 1px solid var(--border);
+            border-radius: 14px; padding: 14px 18px 14px 44px; color: var(--text);
+            font-size: 1rem; outline: none; transition: border-color 0.2s;
         }
         .search-wrap input:focus { border-color: var(--accent); }
         .search-wrap::before {
-            content: '🔍';
-            position: absolute;
-            left: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 1rem;
-            opacity: 0.6;
+            content: '🔍'; position: absolute; left: 16px; top: 50%;
+            transform: translateY(-50%); font-size: 1rem; opacity: 0.6;
         }
-
         .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
         .filters button {
             background: var(--card); color: var(--muted);
@@ -165,39 +96,31 @@
             font-size: 0.7rem; color: var(--muted); text-transform: uppercase;
             letter-spacing: 1px; font-weight: 600; margin-bottom: 6px; margin-top: 8px;
         }
-
         .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
         }
         .card {
             background: var(--card); border: 1px solid var(--border);
             border-radius: 20px; overflow: hidden;
             transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
-            display: flex; flex-direction: column;
-            cursor: pointer;
+            display: flex; flex-direction: column; cursor: pointer;
         }
         .card:hover {
-            transform: translateY(-4px);
-            border-color: var(--accent);
+            transform: translateY(-4px); border-color: var(--accent);
             box-shadow: 0 12px 40px rgba(0, 122, 255, 0.08);
         }
         .card-image {
-            width: 100%; aspect-ratio: 4/3;
-            background: var(--border);
-            background-size: cover; background-position: center;
-            position: relative;
+            width: 100%; aspect-ratio: 4/3; background: var(--border);
+            background-size: cover; background-position: center; position: relative;
         }
         .card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
         .card-tag {
             display: inline-block; font-size: 0.7rem; text-transform: uppercase;
-            letter-spacing: 1px; color: var(--accent);
-            margin-bottom: 8px; font-weight: 700;
+            letter-spacing: 1px; color: var(--accent); margin-bottom: 8px; font-weight: 700;
         }
         .card h3 {
-            font-size: 1.05rem; margin-bottom: 10px;
-            line-height: 1.35; font-weight: 700;
+            font-size: 1.05rem; margin-bottom: 10px; line-height: 1.35; font-weight: 700;
             display: -webkit-box; -webkit-line-clamp: 3;
             -webkit-box-orient: vertical; overflow: hidden;
         }
@@ -205,360 +128,178 @@
             font-size: 0.85rem; color: var(--muted);
             margin-bottom: 5px; display: flex; align-items: center; gap: 6px;
         }
-        .card-meta.missing { opacity: 0.5; }
         .card-price {
             margin-top: auto; padding-top: 12px;
             font-weight: 800; font-size: 1rem;
         }
         .card-price.free { color: var(--accent); }
         .card-score {
-            font-size: 0.75rem;
-            color: var(--accent);
-            margin-top: 6px;
-            font-weight: 600;
+            font-size: 0.75rem; color: var(--accent);
+            margin-top: 6px; font-weight: 600;
         }
-
         .overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.9);
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s;
-            z-index: 998;
-            backdrop-filter: blur(8px);
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+            z-index: 998; backdrop-filter: blur(8px);
         }
         .overlay.active { opacity: 1; pointer-events: auto; }
-
         .global-loader {
-            position: fixed;
-            inset: 0;
-            background: var(--bg);
-            z-index: 10000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: fixed; inset: 0; background: var(--bg); z-index: 10000;
+            display: flex; align-items: center; justify-content: center;
             transition: opacity 0.6s ease;
         }
         .global-loader.hidden { opacity: 0; pointer-events: none; }
         .global-loader-content {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 16px;
+            display: flex; flex-direction: column; align-items: center; gap: 16px;
         }
-        .global-loader-text {
-            font-size: 1.1rem;
-            font-weight: 700;
-            color: var(--accent);
-        }
-        .global-loader-sub {
-            font-size: 0.85rem;
-            color: var(--muted);
-        }
+        .global-loader-text { font-size: 1.1rem; font-weight: 700; color: var(--accent); }
+        .global-loader-sub { font-size: 0.85rem; color: var(--muted); }
         .spinner {
-            width: 44px;
-            height: 44px;
+            width: 44px; height: 44px;
             border: 4px solid rgba(196, 255, 77, 0.2);
-            border-top-color: var(--accent);
-            border-radius: 50%;
+            border-top-color: var(--accent); border-radius: 50%;
             animation: spin 0.9s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-
         .sidebar {
-            position: fixed;
-            inset: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 999;
-            transform: translateX(-100%);
+            position: fixed; inset: 0; width: 100vw; height: 100vh;
+            z-index: 999; transform: translateX(-100%);
             transition: transform 0.45s cubic-bezier(0.34, 1.3, 0.64, 1);
-            pointer-events: none;
-            background: var(--bg);
+            pointer-events: none; background: var(--bg);
         }
-        .sidebar.active {
-            transform: translateX(0);
-            pointer-events: auto;
-        }
-
-        .sidebar-inner {
-            width: 100%;
-            height: 100%;
-            display: flex;
-            flex-direction: row;
-        }
+        .sidebar.active { transform: translateX(0); pointer-events: auto; }
+        .sidebar-inner { width: 100%; height: 100%; display: flex; flex-direction: row; }
         .sidebar-inner.no-image .card-3d-wrap { display: none; }
         .sidebar-inner.no-image .card-info { border-left: none; }
-
         .card-3d-wrap {
-            flex: 0 0 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            background: var(--bg);
-            perspective: 1500px;
-            overflow: hidden;
-            height: 100vh;
-            position: relative;
+            flex: 0 0 50%; display: flex; align-items: center; justify-content: center;
+            padding: 20px; background: var(--bg); perspective: 1500px;
+            overflow: hidden; height: 100vh; position: relative;
         }
         .card-3d {
-            width: 100%;
-            height: 100%;
-            border-radius: 16px;
-            background: var(--card);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow:
-                0 30px 60px rgba(0,0,0,0.4),
-                0 0 0 1px var(--border) inset;
-            transform-style: preserve-3d;
-            transition: transform 0.1s ease-out;
-            cursor: grab;
-            position: relative;
-            overflow: hidden;
+            width: 100%; height: 100%; border-radius: 16px; background: var(--card);
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.4), 0 0 0 1px var(--border) inset;
+            transform-style: preserve-3d; transition: transform 0.1s ease-out;
+            cursor: grab; position: relative; overflow: hidden;
         }
         .card-3d:active { cursor: grabbing; }
         .card-3d img {
-            max-width: 100%;
-            max-height: 100%;
-            width: auto;
-            height: auto;
-            object-fit: contain;
-            display: block;
-            user-select: none;
-            -webkit-user-drag: none;
-            pointer-events: none;
+            max-width: 100%; max-height: 100%; width: auto; height: auto;
+            object-fit: contain; display: block; user-select: none;
+            -webkit-user-drag: none; pointer-events: none;
         }
         .card-3d::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: 16px;
+            content: ''; position: absolute; inset: 0; border-radius: 16px;
             background: linear-gradient(135deg, rgba(255,255,255,0.06) 0%, transparent 50%);
             pointer-events: none;
         }
-
         .card-3d-hint {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.7);
-            color: #fff;
-            font-size: 0.75rem;
-            padding: 6px 14px;
-            border-radius: 100px;
-            pointer-events: none;
-            transition: opacity 0.4s;
-            opacity: 0;
-            white-space: nowrap;
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.7); color: #fff; font-size: 0.75rem;
+            padding: 6px 14px; border-radius: 100px; pointer-events: none;
+            transition: opacity 0.4s; opacity: 0; white-space: nowrap;
         }
         .sidebar.active .card-3d-hint { opacity: 1; }
         .card-3d-wrap.touched .card-3d-hint { opacity: 0; }
-
         .card-3d-loading {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 14px;
-            background: var(--card);
-            color: var(--muted);
-            font-size: 0.9rem;
-            z-index: 2;
+            position: absolute; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 14px;
+            background: var(--card); color: var(--muted); font-size: 0.9rem; z-index: 2;
         }
         .card-3d-loading.hidden { display: none; }
-
         .card-info {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-            border-left: 1px solid var(--border);
-            background: var(--bg);
-            height: 100vh;
-            position: relative;
+            flex: 1; display: flex; flex-direction: column; overflow: hidden;
+            border-left: 1px solid var(--border); background: var(--bg);
+            height: 100vh; position: relative;
         }
         .card-info-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 18px 28px;
-            border-bottom: 1px solid var(--border);
-            flex-shrink: 0;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 18px 28px; border-bottom: 1px solid var(--border); flex-shrink: 0;
         }
         .card-info-header h2 {
-            font-size: 0.85rem;
-            font-weight: 700;
-            color: var(--muted);
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
+            font-size: 0.85rem; font-weight: 700; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 1.5px;
         }
         .card-info-close {
-            background: var(--card);
-            border: 1px solid var(--border);
-            color: var(--text);
-            font-size: 1.4rem;
-            width: 42px;
-            height: 42px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background 0.2s;
-            line-height: 1;
-            flex-shrink: 0;
+            background: var(--card); border: 1px solid var(--border);
+            color: var(--text); font-size: 1.4rem; width: 42px; height: 42px;
+            border-radius: 50%; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s; line-height: 1; flex-shrink: 0;
         }
         .card-info-close:hover { background: var(--border); }
-
         .card-info-scroll {
-            flex: 1;
-            overflow-y: auto;
-            padding: 32px 28px;
-            scrollbar-width: thin;
-            scrollbar-color: var(--border) transparent;
+            flex: 1; overflow-y: auto; padding: 32px 28px;
+            scrollbar-width: thin; scrollbar-color: var(--border) transparent;
         }
         .card-info-scroll::-webkit-scrollbar { width: 8px; }
         .card-info-scroll::-webkit-scrollbar-track { background: transparent; }
         .card-info-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-
         .card-info-loading {
-            position: absolute;
-            inset: 0;
-            top: 63px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 14px;
-            background: var(--bg);
-            color: var(--muted);
-            font-size: 0.9rem;
-            z-index: 2;
+            position: absolute; inset: 0; top: 63px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 14px; background: var(--bg); color: var(--muted);
+            font-size: 0.9rem; z-index: 2;
         }
         .card-info-loading.hidden { display: none; }
-
         .card-info-tag {
-            display: inline-block;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--accent);
-            margin-bottom: 12px;
-            font-weight: 700;
-            padding: 4px 10px;
-            background: var(--card);
-            border: 1px solid var(--border);
-            border-radius: 6px;
+            display: inline-block; font-size: 0.75rem; text-transform: uppercase;
+            letter-spacing: 1px; color: var(--accent); margin-bottom: 12px; font-weight: 700;
+            padding: 4px 10px; background: var(--card);
+            border: 1px solid var(--border); border-radius: 6px;
         }
         .card-info-title {
-            font-size: 1.8rem;
-            font-weight: 800;
-            line-height: 1.3;
-            margin-bottom: 24px;
-            letter-spacing: -0.5px;
+            font-size: 1.8rem; font-weight: 800; line-height: 1.3;
+            margin-bottom: 24px; letter-spacing: -0.5px;
         }
         .card-info-meta {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            margin-bottom: 24px;
-            padding: 20px;
-            background: var(--card);
-            border-radius: 14px;
-            border: 1px solid var(--border);
+            display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px;
+            padding: 20px; background: var(--card);
+            border-radius: 14px; border: 1px solid var(--border);
         }
         .card-info-meta-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            font-size: 1rem;
+            display: flex; align-items: flex-start; gap: 12px; font-size: 1rem;
         }
         .card-info-meta-item .icon {
-            font-size: 1.2rem;
-            flex-shrink: 0;
-            width: 28px;
-            text-align: center;
+            font-size: 1.2rem; flex-shrink: 0; width: 28px; text-align: center;
         }
         .card-info-meta-item .label {
-            color: var(--muted);
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 600;
-            margin-bottom: 2px;
+            color: var(--muted); font-size: 0.75rem;
+            text-transform: uppercase; letter-spacing: 0.5px;
+            font-weight: 600; margin-bottom: 2px;
         }
         .card-info-meta-item .value { color: var(--text); font-weight: 500; }
         .card-info-meta-item .value.price-free { color: var(--accent); font-weight: 700; }
-        .card-info-meta-item .value.missing { color: var(--muted); font-style: italic; }
-
         .card-info-text {
-            font-size: 1.05rem;
-            line-height: 1.8;
-            color: var(--text);
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            margin-bottom: 24px;
-            padding: 20px;
-            background: var(--card);
-            border-radius: 14px;
-            border: 1px solid var(--border);
-            opacity: 0.9;
+            font-size: 1.05rem; line-height: 1.8; color: var(--text);
+            white-space: pre-wrap; word-wrap: break-word; margin-bottom: 24px;
+            padding: 20px; background: var(--card);
+            border-radius: 14px; border: 1px solid var(--border); opacity: 0.9;
         }
-
-        .card-info-actions {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
+        .card-info-actions { display: flex; flex-direction: column; gap: 10px; }
         .card-info-btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 16px 24px;
-            border-radius: 14px;
-            font-size: 1rem;
-            font-weight: 700;
-            text-decoration: none;
-            cursor: pointer;
-            border: none;
-            transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            padding: 16px 24px; border-radius: 14px; font-size: 1rem;
+            font-weight: 700; text-decoration: none; cursor: pointer;
+            border: none; transition: all 0.2s;
         }
         .card-info-btn.primary { background: var(--accent); color: var(--accent-contrast); }
         .card-info-btn.primary:hover { opacity: 0.85; transform: translateY(-2px); }
         .card-info-btn.secondary {
-            background: var(--card);
-            color: var(--text);
-            border: 1px solid var(--border);
+            background: var(--card); color: var(--text); border: 1px solid var(--border);
         }
         .card-info-btn.secondary:hover { background: var(--border); }
-
         .empty { text-align: center; padding: 80px 20px; color: var(--muted); grid-column: 1/-1; }
-
         .toast {
-            position: fixed;
-            bottom: 30px;
-            left: 50%;
+            position: fixed; bottom: 30px; left: 50%;
             transform: translateX(-50%) translateY(80px);
-            background: var(--accent);
-            color: var(--accent-contrast);
-            padding: 12px 24px;
-            border-radius: 100px;
-            font-weight: 700;
-            font-size: 0.9rem;
-            z-index: 10001;
-            transition: transform 0.3s ease;
-            pointer-events: none;
+            background: var(--accent); color: var(--accent-contrast);
+            padding: 12px 24px; border-radius: 100px;
+            font-weight: 700; font-size: 0.9rem; z-index: 10001;
+            transition: transform 0.3s ease; pointer-events: none;
         }
         .toast.show { transform: translateX(-50%) translateY(0); }
-
         @media (max-width: 800px) {
             .sidebar-inner { flex-direction: column; }
             .card-3d-wrap { flex: 0 0 45%; height: 45vh; padding: 10px; }
@@ -682,7 +423,6 @@
 
     <script type="module">
         import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2';
-
         env.allowLocalModels = false;
 
         let extractor = null;
@@ -720,14 +460,12 @@
                 const t = document.getElementById(id.replace('icon', 'temp'));
                 if (t) t.textContent = temp;
             };
-
             const iconMap = {
                 0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️', 45: '🌫️', 48: '🌫️',
                 51: '🌦️', 53: '🌦️', 55: '🌦️', 61: '🌧️', 63: '🌧️', 65: '🌧️',
                 71: '🌨️', 73: '🌨️', 75: '🌨️', 80: '🌧️', 81: '🌧️', 82: '🌧️',
                 95: '⛈️', 96: '⛈️', 99: '⛈️',
             };
-
             try {
                 const res = await fetch(
                     'https://api.open-meteo.com/v1/forecast?latitude=54.7388&longitude=55.9721&hourly=temperature_2m,weather_code&current=temperature_2m,weather_code&forecast_days=2&timezone=Asia%2FYekaterinburg',
@@ -735,10 +473,7 @@
                 );
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
-
-                const nowTemp = Math.round(data.current.temperature_2m);
-                const nowIcon = iconMap[data.current.weather_code] || '🌡️';
-                setW('w-now-icon', nowIcon, nowTemp + '°');
+                setW('w-now-icon', iconMap[data.current.weather_code] || '🌡️', Math.round(data.current.temperature_2m) + '°');
 
                 const times = data.hourly.time;
                 const temps = data.hourly.temperature_2m;
@@ -750,30 +485,17 @@
                 if (eveIdx < 0) eveIdx = times.findIndex(t => t === `${today}T17:00`);
                 let tmrIdx = times.findIndex(t => t === `${tomorrow}T12:00`);
 
-                if (eveIdx >= 0) {
-                    setW('w-eve-icon', iconMap[codes[eveIdx]] || '🌡️', Math.round(temps[eveIdx]) + '°');
-                } else {
-                    setW('w-eve-icon', '—', '—');
-                }
-
-                if (tmrIdx >= 0) {
-                    setW('w-tmr-icon', iconMap[codes[tmrIdx]] || '🌡️', Math.round(temps[tmrIdx]) + '°');
-                } else {
-                    setW('w-tmr-icon', '—', '—');
-                }
+                if (eveIdx >= 0) setW('w-eve-icon', iconMap[codes[eveIdx]] || '🌡️', Math.round(temps[eveIdx]) + '°');
+                else setW('w-eve-icon', '—', '—');
+                if (tmrIdx >= 0) setW('w-tmr-icon', iconMap[codes[tmrIdx]] || '🌡️', Math.round(temps[tmrIdx]) + '°');
+                else setW('w-tmr-icon', '—', '—');
                 return;
-            } catch (err) {
-                console.warn('Open-Meteo failed:', err);
-            }
-
+            } catch (err) { console.warn('Open-Meteo failed:', err); }
             try {
                 const res = await fetch('https://wttr.in/Ufa?format=j1', { signal: AbortSignal.timeout(8000) });
                 const data = await res.json();
-                const cur = data.current_condition[0];
-                setW('w-now-icon', '🌡️', cur.temp_C + '°');
-            } catch (err) {
-                console.error('Weather failed:', err);
-            }
+                setW('w-now-icon', '🌡️', data.current_condition[0].temp_C + '°');
+            } catch (err) { console.error('Weather failed:', err); }
         }
         loadWeather();
         setInterval(loadWeather, 30 * 60 * 1000);
@@ -783,21 +505,16 @@
             const statusEl = document.getElementById('ai-status');
             const inputEl = document.getElementById('ai-query');
             if (!statusEl || !inputEl) return;
-
             try {
                 statusEl.textContent = 'Загрузка модели (33 МБ)...';
                 if (globalLoaderSub) globalLoaderSub.textContent = 'Загрузка AI-модели...';
-
                 extractor = await pipeline('feature-extraction', 'Xenova/all-MiniLM-L6-v2', { dtype: 'q8' });
-
                 statusEl.textContent = 'Индексация событий...';
                 if (globalLoaderSub) globalLoaderSub.textContent = 'Индексация событий...';
                 await indexEvents();
-
                 statusEl.textContent = 'Готово! Спрашивай.';
                 inputEl.disabled = false;
                 aiReady = true;
-
                 if (globalLoader) globalLoader.classList.add('hidden');
             } catch (err) {
                 console.error('AI init error:', err);
@@ -805,7 +522,6 @@
                 if (globalLoader) globalLoader.classList.add('hidden');
             }
         }
-
         async function indexEvents() {
             if (!extractor || allEvents.length === 0) return;
             eventEmbeddings = [];
@@ -815,23 +531,17 @@
                 try {
                     const output = await extractor(text, { pooling: 'mean', normalize: true });
                     eventEmbeddings.push(Array.from(output.data));
-                } catch (err) {
-                    eventEmbeddings.push(null);
-                }
+                } catch (err) { eventEmbeddings.push(null); }
             }
         }
-
         function cosineSimilarity(a, b) {
             if (!a || !b) return 0;
             let dot = 0, normA = 0, normB = 0;
             for (let i = 0; i < a.length; i++) {
-                dot += a[i] * b[i];
-                normA += a[i] * a[i];
-                normB += b[i] * b[i];
+                dot += a[i] * b[i]; normA += a[i] * a[i]; normB += b[i] * b[i];
             }
             return dot / (Math.sqrt(normA) * Math.sqrt(normB));
         }
-
         async function aiSearch(query) {
             if (!extractor || !query.trim()) { renderAll(); return; }
             const statusEl = document.getElementById('ai-status');
@@ -840,8 +550,7 @@
                 const output = await extractor(query, { pooling: 'mean', normalize: true });
                 const queryEmbedding = Array.from(output.data);
                 const scored = allEvents.map((event, idx) => ({
-                    event,
-                    score: eventEmbeddings[idx] ? cosineSimilarity(queryEmbedding, eventEmbeddings[idx]) : 0
+                    event, score: eventEmbeddings[idx] ? cosineSimilarity(queryEmbedding, eventEmbeddings[idx]) : 0
                 }));
                 scored.sort((a, b) => b.score - a.score);
                 const relevant = scored.filter(s => s.score > 0.2);
@@ -880,53 +589,36 @@
             if (parts.length) return parts.join(' · ');
             return 'Дата уточняется';
         }
-
         function isToday(e) {
             if (!e.date_text) return false;
-            const today = new Date();
-            const dd = String(today.getDate()).padStart(2, '0');
-            const mm = String(today.getMonth() + 1).padStart(2, '0');
-            const yyyy = today.getFullYear();
-            return e.date_text === `${dd}.${mm}.${yyyy}`;
+            const t = new Date();
+            return e.date_text === `${String(t.getDate()).padStart(2,'0')}.${String(t.getMonth()+1).padStart(2,'0')}.${t.getFullYear()}`;
         }
-
         function isTomorrow(e) {
             if (!e.date_text) return false;
             const t = new Date(Date.now() + 86400000);
-            const dd = String(t.getDate()).padStart(2, '0');
-            const mm = String(t.getMonth() + 1).padStart(2, '0');
-            const yyyy = t.getFullYear();
-            return e.date_text === `${dd}.${mm}.${yyyy}`;
+            return e.date_text === `${String(t.getDate()).padStart(2,'0')}.${String(t.getMonth()+1).padStart(2,'0')}.${t.getFullYear()}`;
         }
-
         function isWeekend(e) {
             if (!e.date_text) return false;
             const now = new Date();
             for (let i = 0; i < 8; i++) {
                 const d = new Date(now.getTime() + i * 86400000);
                 if (d.getDay() === 6 || d.getDay() === 0) {
-                    const dd = String(d.getDate()).padStart(2, '0');
-                    const mm = String(d.getMonth() + 1).padStart(2, '0');
-                    const yyyy = d.getFullYear();
-                    if (e.date_text === `${dd}.${mm}.${yyyy}`) return true;
+                    if (e.date_text === `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`) return true;
                 }
             }
             return false;
         }
-
         function isThisWeek(e) {
             if (!e.date_text) return false;
             const now = new Date();
             for (let i = 0; i < 7; i++) {
                 const d = new Date(now.getTime() + i * 86400000);
-                const dd = String(d.getDate()).padStart(2, '0');
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const yyyy = d.getFullYear();
-                if (e.date_text === `${dd}.${mm}.${yyyy}`) return true;
+                if (e.date_text === `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${d.getFullYear()}`) return true;
             }
             return false;
         }
-
         function sortEvents(events) {
             return [...events].sort((a, b) => {
                 const aHasDate = !!a.date_text;
@@ -937,22 +629,20 @@
                 return 0;
             });
         }
-
         function escapeHtml(s) {
             const div = document.createElement('div');
             div.textContent = s || '';
             return div.innerHTML;
         }
-
         function renderCard(e, idx, score) {
             const img = e.image ? `<div class="card-image" style="background-image: url('${e.image}')"></div>` : '';
             const priceClass = (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод') ? 'free' : '';
             const source = e.source ? `<div class="card-tag">@${e.source}</div>` : '';
             const scoreHtml = score !== undefined ? `<div class="card-score">Релевантность: ${Math.round(score * 100)}%</div>` : '';
 
-            const dateStr = formatDate(e);
-            const venueStr = e.venue ? escapeHtml(e.venue) : 'Место уточняется';
-            const priceStr = e.price ? escapeHtml(e.price) : 'Цена уточняется';
+            // ─── Не показываем пустые поля ───
+            const venueHtml = e.venue ? `<div class="card-meta">📍 ${escapeHtml(e.venue)}</div>` : '';
+            const priceHtml = e.price ? `<div class="card-price ${priceClass}">${escapeHtml(e.price)}</div>` : '';
 
             return `
                 <div class="card" data-index="${idx}" onclick="openSidebar(${idx})">
@@ -960,34 +650,29 @@
                     <div class="card-body">
                         ${source}
                         <h3>${escapeHtml(e.title) || 'Без названия'}</h3>
-                        <div class="card-meta">📅 ${dateStr}</div>
-                        <div class="card-meta ${e.venue ? '' : 'missing'}">📍 ${venueStr}</div>
-                        <div class="card-price ${priceClass}">${priceStr}</div>
+                        <div class="card-meta">📅 ${formatDate(e)}</div>
+                        ${venueHtml}
+                        ${priceHtml}
                         ${scoreHtml}
                     </div>
                 </div>
             `;
         }
-
         function render() {
             try {
                 const feed = document.getElementById('feed');
                 const countEl = document.getElementById('count');
                 if (!feed) return;
-
                 let filtered = allEvents;
-
                 if (currentDateFilter === 'today') filtered = filtered.filter(isToday);
                 else if (currentDateFilter === 'tomorrow') filtered = filtered.filter(isTomorrow);
                 else if (currentDateFilter === 'weekend') filtered = filtered.filter(isWeekend);
                 else if (currentDateFilter === 'week') filtered = filtered.filter(isThisWeek);
-
                 if (currentCategoryFilter === 'free') {
                     filtered = filtered.filter(e => (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод'));
                 } else if (currentCategoryFilter !== 'all') {
                     filtered = filtered.filter(e => (e.category === currentCategoryFilter) || (e.kind === currentCategoryFilter));
                 }
-
                 if (searchQuery) {
                     const q = searchQuery.toLowerCase();
                     filtered = filtered.filter(e => {
@@ -995,15 +680,12 @@
                         return text.includes(q);
                     });
                 }
-
                 filtered = sortEvents(filtered);
                 if (countEl) countEl.textContent = filtered.length + ' событий';
-
                 if (filtered.length === 0) {
                     feed.innerHTML = '<div class="empty">Ничего не найдено. Попробуй другой фильтр.</div>';
                     return;
                 }
-
                 feed.innerHTML = filtered.map((e, idx) => renderCard(e, idx)).join('');
                 window.currentFiltered = filtered;
             } catch (err) {
@@ -1012,25 +694,19 @@
                 if (feed) feed.innerHTML = '<div class="empty">Ошибка рендера: ' + err.message + '</div>';
             }
         }
-
         function renderWithScores(scored) {
             const feed = document.getElementById('feed');
             const countEl = document.getElementById('count');
             if (!feed) return;
-
             if (countEl) countEl.textContent = scored.length + ' событий';
-
             if (scored.length === 0) {
                 feed.innerHTML = '<div class="empty">Ничего не найдено по смыслу. Попробуй другой запрос.</div>';
                 return;
             }
-
             feed.innerHTML = scored.map((s, idx) => renderCard(s.event, idx, s.score)).join('');
             window.currentFiltered = scored.map(s => s.event);
         }
-
         function renderAll() { render(); }
-
         function showToast(msg) {
             const t = document.getElementById('toast');
             if (!t) return;
@@ -1038,35 +714,25 @@
             t.classList.add('show');
             setTimeout(() => t.classList.remove('show'), 2000);
         }
-
         function openSidebar(index) {
             const e = window.currentFiltered[index];
             if (!e) return;
-
             const content = document.getElementById('card-info-content');
             const card3d = document.getElementById('card-3d');
             const loadingImg = document.getElementById('card-3d-loading');
             const loadingInfo = document.getElementById('card-info-loading');
             const sidebarInner = document.getElementById('sidebar-inner');
             if (!content || !card3d) return;
-
-            if (!e.image) {
-                if (sidebarInner) sidebarInner.classList.add('no-image');
-            } else {
-                if (sidebarInner) sidebarInner.classList.remove('no-image');
-            }
-
+            if (!e.image) sidebarInner.classList.add('no-image');
+            else sidebarInner.classList.remove('no-image');
             if (loadingImg) loadingImg.classList.remove('hidden');
             if (loadingInfo) loadingInfo.classList.remove('hidden');
-
             const oldImg = card3d.querySelector('img');
             if (oldImg) oldImg.remove();
-
             resetRotation();
             document.getElementById('sidebar').classList.add('active');
             document.getElementById('overlay').classList.add('active');
             document.body.style.overflow = 'hidden';
-
             if (e.image) {
                 const img = new Image();
                 img.onload = () => {
@@ -1075,22 +741,26 @@
                 };
                 img.onerror = () => {
                     if (loadingImg) loadingImg.classList.add('hidden');
-                    if (sidebarInner) sidebarInner.classList.add('no-image');
+                    sidebarInner.classList.add('no-image');
                 };
                 img.alt = e.title || '';
                 img.src = e.image;
             }
-
             const isFree = (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод');
             const tagHtml = e.source ? `<div class="card-info-tag">@${escapeHtml(e.source)}</div>` : '';
             const fullText = e.raw || e.desc || 'Описание отсутствует.';
 
-            const venueHtml = e.venue
-                ? `<div class="value">${escapeHtml(e.venue)}</div>`
-                : `<div class="value missing">Уточняется</div>`;
-            const priceHtml = e.price
-                ? `<div class="value ${isFree ? 'price-free' : ''}">${escapeHtml(e.price)}</div>`
-                : `<div class="value missing">Уточняется</div>`;
+            // ─── Не показываем пустые поля ───
+            const venueBlock = e.venue ? `
+                <div class="card-info-meta-item">
+                    <span class="icon">📍</span>
+                    <div><div class="label">Место</div><div class="value">${escapeHtml(e.venue)}</div></div>
+                </div>` : '';
+            const priceBlock = e.price ? `
+                <div class="card-info-meta-item">
+                    <span class="icon">💰</span>
+                    <div><div class="label">Цена</div><div class="value ${isFree ? 'price-free' : ''}">${escapeHtml(e.price)}</div></div>
+                </div>` : '';
 
             setTimeout(() => {
                 content.innerHTML = `
@@ -1101,14 +771,8 @@
                             <span class="icon">📅</span>
                             <div><div class="label">Дата и время</div><div class="value">${formatDate(e)}</div></div>
                         </div>
-                        <div class="card-info-meta-item">
-                            <span class="icon">📍</span>
-                            <div><div class="label">Место</div>${venueHtml}</div>
-                        </div>
-                        <div class="card-info-meta-item">
-                            <span class="icon">💰</span>
-                            <div><div class="label">Цена</div>${priceHtml}</div>
-                        </div>
+                        ${venueBlock}
+                        ${priceBlock}
                     </div>
                     <div class="card-info-text">${escapeHtml(fullText)}</div>
                     <div class="card-info-actions">
@@ -1121,7 +785,6 @@
                 if (loadingInfo) loadingInfo.classList.add('hidden');
             }, 150);
         }
-
         function shareEvent(index) {
             const e = window.currentFiltered[index];
             if (!e) return;
@@ -1132,14 +795,10 @@
                 navigator.clipboard.writeText(text).then(() => showToast('Скопировано!')).catch(() => showToast('Не удалось скопировать'));
             }
         }
-
         function downloadICS(index) {
             const e = window.currentFiltered[index];
             if (!e) return;
-            if (!e.start) {
-                showToast('Дата события не указана');
-                return;
-            }
+            if (!e.start) { showToast('Дата события не указана'); return; }
             const start = new Date(e.start);
             const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
             const fmt = d => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
@@ -1160,21 +819,16 @@
             URL.revokeObjectURL(url);
             showToast('Скачано!');
         }
-
         function closeSidebar() {
             document.getElementById('sidebar').classList.remove('active');
             document.getElementById('overlay').classList.remove('active');
             document.body.style.overflow = '';
             resetRotation();
         }
-
         const card3d = document.getElementById('card-3d');
         const card3dWrap = document.getElementById('card-3d-wrap');
         let rotX = 0, rotY = 0;
-        let isDragging = false;
-        let startX = 0, startY = 0;
-        let startRotX = 0, startRotY = 0;
-
+        let isDragging = false, startX = 0, startY = 0, startRotX = 0, startRotY = 0;
         function applyRotation() {
             if (!card3d) return;
             card3d.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
@@ -1195,8 +849,7 @@
         }
         function onMove(x, y) {
             if (!isDragging) return;
-            const dx = x - startX;
-            const dy = y - startY;
+            const dx = x - startX, dy = y - startY;
             rotY = Math.max(-40, Math.min(40, startRotY + dx * 0.4));
             rotX = Math.max(-40, Math.min(40, startRotX - dy * 0.4));
             applyRotation();
@@ -1216,22 +869,17 @@
             card3d.addEventListener('touchmove', (e) => { const t = e.touches[0]; onMove(t.clientX, t.clientY); }, { passive: true });
             card3d.addEventListener('touchend', onEnd);
         }
-
         document.getElementById('sidebar-close').addEventListener('click', closeSidebar);
         document.getElementById('overlay').addEventListener('click', closeSidebar);
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSidebar(); });
-
         document.getElementById('search').addEventListener('input', (e) => {
-            searchQuery = e.target.value;
-            render();
+            searchQuery = e.target.value; render();
         });
-
         document.getElementById('ai-query').addEventListener('input', (e) => {
             const query = e.target.value;
             if (query.length > 3) aiSearch(query);
             else if (query.length === 0) renderAll();
         });
-
         document.getElementById('date-filters').addEventListener('click', (e) => {
             if (e.target.tagName === 'BUTTON') {
                 document.querySelectorAll('#date-filters button').forEach(b => b.classList.remove('active'));
@@ -1240,7 +888,6 @@
                 render();
             }
         });
-
         document.getElementById('category-filters').addEventListener('click', (e) => {
             if (e.target.tagName === 'BUTTON') {
                 document.querySelectorAll('#category-filters button').forEach(b => b.classList.remove('active'));
@@ -1249,18 +896,15 @@
                 render();
             }
         });
-
         window.openSidebar = openSidebar;
         window.closeSidebar = closeSidebar;
         window.shareEvent = shareEvent;
         window.downloadICS = downloadICS;
-
         setTimeout(() => {
             if (globalLoader && !globalLoader.classList.contains('hidden')) {
                 globalLoader.classList.add('hidden');
             }
         }, 20000);
-
         load();
         initAI();
     </script>
