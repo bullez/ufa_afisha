@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Ufa Afisha — гибрид: умная очистка + улучшенные парсеры
+Ufa Afisha — с фильтром прошедших событий и строгим отбором анонсов
 """
 
 import os, re, json, logging, hashlib
@@ -27,7 +27,7 @@ EVENT_KEYWORDS = [
     "кино","фильм","кинопоказ","концерт","джаз","оркестр","джем","dj","вечеринк","рейв",
     "лектор","лекци","семинар","мастер-класс","воркшоп","театр","спектакл","перформанс",
     "выставк","галере","музей","арт","экскурс","киноклуб","фестиваль","маркет","стендап",
-    "квиз","игра","показ","премьера","открытие","тренинг","встреча"
+    "квиз","премьера","открытие","тренинг"
 ]
 EVENT_RE = re.compile("|".join(EVENT_KEYWORDS), re.I)
 
@@ -59,6 +59,17 @@ VENUE_HINTS = [
     "Огни Уфы", "Гостиный двор", "Конгресс-холл", "Торатау", "Башкирия", "Neft",
     "Особняк", "Артерия", "Юкси Парк", "Мегаполис", "Пятница", "Правда",
     "Уфа-Арена", "Синема Парк", "Галерея Арт", "ЦКиНТ", "ДК Ядкарь",
+    "Биатлонка", "Соты", "Тинькофф", "Сбер", "Амадеус", "Гастробар", "Лофт",
+    "Кэмп", "Camp", "Кэмп", "Monkey Grinder", "Шкапских", "Мира", "Монумент",
+]
+
+# Посты, которые НЕ являются анонсами (даже если есть ключевые слова)
+NON_EVENT_MARKERS = [
+    "реклама", "erid", "ооо", "инн", "подпишись", "подписывайтесь",
+    "розыгрыш", "конкурс", "приз", "giveaway",
+    "итоги", "результаты", "запись эфира", "смотрите на",
+    "фотоотчёт", "фотоотчет", "как это было",
+    "спасибо всем", "благодарим",
 ]
 
 def load_json_file(filename: str, default):
@@ -80,7 +91,11 @@ def detect_category(text: str) -> str:
 
 def should_exclude(text: str, rules: dict) -> bool:
     low = (text or "").lower()
-    return any(w.lower() in low for w in rules.get("hard_exclude_words", []))
+    if any(w.lower() in low for w in rules.get("hard_exclude_words", [])):
+        return True
+    if any(w.lower() in low for w in NON_EVENT_MARKERS):
+        return True
+    return False
 
 def clean_title(title: str, rules: dict) -> str:
     for prefix in rules.get("title_prefixes_remove", []):
@@ -110,8 +125,8 @@ class Event:
     posted_at: Optional[str]
     raw: str
     image: Optional[str] = None
-    kind: str = "other"          # категория: concert, party, cinema...
-    category: str = "other"      # дублируем для совместимости
+    kind: str = "other"
+    category: str = "other"
 
 def norm(s: str) -> str:
     return re.sub(r"\s+", " ", (s or "").replace("\xa0", " ")).strip()
@@ -199,10 +214,6 @@ def extract_venue(text: str, rules: dict) -> Optional[str]:
     if m:
         return m.group(0).strip()
 
-    m = re.search(r"\b([А-ЯЁ][а-яё]+(?:-[А-ЯЁ][а-яё]+)?)\s*,\s*(\d+[А-Яа-я]?)", text)
-    if m:
-        return f"{m.group(1)}, {m.group(2)}"
-
     return None
 
 def title_from_text(text: str) -> str:
@@ -275,6 +286,21 @@ def download_image(url: str, channel: str) -> Optional[str]:
         logging.warning(f"Image download failed: {e}")
         return None
 
+def is_past(date_text: Optional[str]) -> bool:
+    """True, если дата уже прошла."""
+    if not date_text:
+        return False
+    try:
+        parts = date_text.split(".")
+        if len(parts) == 3:
+            d, m, y = int(parts[0]), int(parts[1]), int(parts[2])
+            event_date = datetime(y, m, d, tzinfo=TZ)
+            today = datetime.now(TZ).replace(hour=0, minute=0, second=0, microsecond=0)
+            return event_date < today
+    except Exception:
+        pass
+    return False
+
 def harvest_preview(channels: List[str], rules: dict) -> List[Event]:
     out: List[Event] = []
     for ch in channels:
@@ -292,12 +318,25 @@ def harvest_preview(channels: List[str], rules: dict) -> List[Event]:
                     continue
 
                 dt, date_str, time_str = extract_datetime(text)
+
+                # ─── ФИЛЬТР 1: пропускаем прошедшие события ───
+                if is_past(date_str):
+                    continue
+
+                # ─── ФИЛЬТР 2: должен быть либо ключевое слово + дата/время ───
+                low = text.lower()
+                has_event_kw = bool(EVENT_RE.search(low))
+                has_date = bool(re.search(DATE_TOKENS, low))
+                has_time = bool(re.search(TIME_TOKENS, low))
+
+                # Пропускаем, если нет ключевого слова или нет даты/времени
+                if not has_event_kw:
+                    continue
+                if not (has_date or has_time):
+                    continue
+
                 link_node = it.select_one("a.tgme_widget_message_date")
                 link = link_node.get("href") if link_node else f"https://t.me/{ch}"
-
-                low = text.lower()
-                if not (EVENT_RE.search(low) or re.search(DATE_TOKENS, low) or re.search(TIME_TOKENS, low)):
-                    continue
 
                 img = None
                 ph = it.select_one("a.tgme_widget_message_photo_wrap") or it.select_one("a.tgme_widget_message_video_thumb")
@@ -364,7 +403,6 @@ def save_outputs(events: List[Event]):
 
 def run_once():
     logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
-
     channels = load_json_file("channels.json", [])
     rules = load_json_file("rules.json", {"hard_exclude_words": [], "title_prefixes_remove": [], "venue_synonyms": {}})
 
