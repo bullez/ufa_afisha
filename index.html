@@ -39,7 +39,6 @@
         h1 { font-size: 2rem; font-weight: 800; letter-spacing: -1px; }
         h1 span { color: var(--accent); }
 
-        /* ─── Погода Уфы ─── */
         #weather {
             display: flex;
             align-items: center;
@@ -58,7 +57,6 @@
 
         #count { color: var(--muted); font-size: 0.9rem; font-weight: 500; }
 
-        /* ─── AI-Поиск ─── */
         .ai-search {
             background: linear-gradient(135deg, rgba(196, 255, 77, 0.08) 0%, rgba(196, 255, 77, 0.02) 100%);
             border: 1px solid rgba(196, 255, 77, 0.2);
@@ -73,16 +71,8 @@
             margin-bottom: 12px;
         }
         .ai-search-header .icon { font-size: 1.4rem; }
-        .ai-search-header h2 {
-            font-size: 1rem;
-            font-weight: 700;
-            color: var(--accent);
-        }
-        .ai-search-header .status {
-            font-size: 0.75rem;
-            color: var(--muted);
-            margin-left: auto;
-        }
+        .ai-search-header h2 { font-size: 1rem; font-weight: 700; color: var(--accent); }
+        .ai-search-header .status { font-size: 0.75rem; color: var(--muted); margin-left: auto; }
         .ai-search input {
             width: 100%;
             background: rgba(0,0,0,0.4);
@@ -185,7 +175,6 @@
             font-weight: 600;
         }
 
-        /* ─── Сайдбар на весь экран ─── */
         .overlay {
             position: fixed;
             inset: 0;
@@ -414,10 +403,7 @@
             border: none;
             transition: all 0.2s;
         }
-        .card-info-btn.primary {
-            background: var(--accent);
-            color: #000;
-        }
+        .card-info-btn.primary { background: var(--accent); color: #000; }
         .card-info-btn.primary:hover { opacity: 0.85; transform: translateY(-2px); }
         .card-info-btn.secondary {
             background: rgba(255,255,255,0.06);
@@ -456,7 +442,6 @@
         <div id="count"></div>
     </header>
 
-    <!-- AI-Поиск -->
     <div class="ai-search">
         <div class="ai-search-header">
             <span class="icon">🤖</span>
@@ -499,7 +484,6 @@
         </div>
     </aside>
 
-    <!-- Transformers.js для AI-поиска -->
     <script type="module">
         import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2';
 
@@ -510,14 +494,50 @@
         let allEvents = [];
         let aiReady = false;
 
-        // ─── Погода Уфы (Open-Meteo + wttr.in резерв) ───
+        // ─── Погода Уфы (сначала wttr.in, потом Open-Meteo) ───
         async function loadWeather() {
             const tempEl = document.getElementById('weather-temp');
             const descEl = document.getElementById('weather-desc');
             const iconEl = document.getElementById('weather-icon');
             if (!tempEl || !descEl || !iconEl) return;
 
-            // Пробуем Open-Meteo
+            const iconMap = {
+                113: '☀️', 116: '🌤️', 119: '☁️', 122: '☁️',
+                143: '🌫️', 176: '🌦️', 179: '🌨️', 182: '🌨️', 185: '🌨️',
+                200: '⛈️', 227: '🌨️', 230: '🌨️', 248: '🌫️', 260: '🌫️',
+                263: '🌦️', 266: '🌦️', 281: '🌧️', 284: '🌧️',
+                293: '🌧️', 296: '🌧️', 299: '🌧️', 302: '🌧️', 305: '🌧️', 308: '🌧️',
+                311: '🌧️', 314: '🌧️', 317: '🌨️', 320: '🌨️', 323: '🌨️', 326: '🌨️',
+                329: '🌨️', 332: '🌨️', 335: '🌨️', 338: '🌨️',
+                350: '🌧️', 353: '🌦️', 356: '🌧️', 359: '🌧️',
+                362: '🌨️', 365: '🌨️', 368: '🌨️', 371: '🌨️',
+                374: '🌨️', 377: '🌨️', 386: '⛈️', 389: '⛈️',
+                392: '⛈️', 395: '🌨️',
+            };
+
+            // 1. wttr.in
+            try {
+                const res = await fetch(
+                    'https://wttr.in/Ufa?format=j1',
+                    { signal: AbortSignal.timeout(8000) }
+                );
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                const current = data.current_condition[0];
+                const temp = current.temp_C;
+                const desc = current.lang_ru ? current.lang_ru[0].value : current.weatherDesc[0].value;
+                const code = parseInt(current.weatherCode);
+                const icon = iconMap[code] || '🌡️';
+
+                iconEl.textContent = icon;
+                tempEl.textContent = temp + '°C';
+                descEl.textContent = desc;
+                return;
+            } catch (err) {
+                console.warn('wttr.in failed, trying Open-Meteo...', err);
+            }
+
+            // 2. Open-Meteo
             try {
                 const res = await fetch(
                     'https://api.open-meteo.com/v1/forecast?latitude=54.7388&longitude=55.9721&current=temperature_2m,weather_code&timezone=Asia%2FYekaterinburg',
@@ -539,42 +559,6 @@
                     95: ['⛈️', 'Гроза'], 96: ['⛈️', 'Гроза с градом'], 99: ['⛈️', 'Сильная гроза с градом'],
                 };
                 const [icon, desc] = weatherMap[code] || ['🌡️', 'Погода'];
-
-                iconEl.textContent = icon;
-                tempEl.textContent = temp + '°C';
-                descEl.textContent = desc;
-                return;
-            } catch (err) {
-                console.warn('Open-Meteo failed, trying wttr.in...', err);
-            }
-
-            // Резерв: wttr.in
-            try {
-                const res = await fetch(
-                    'https://wttr.in/Ufa?format=j1',
-                    { signal: AbortSignal.timeout(8000) }
-                );
-                if (!res.ok) throw new Error('HTTP ' + res.status);
-                const data = await res.json();
-                const current = data.current_condition[0];
-                const temp = current.temp_C;
-                const desc = current.lang_ru ? current.lang_ru[0].value : current.weatherDesc[0].value;
-
-                const code = parseInt(current.weatherCode);
-                const iconMap = {
-                    113: '☀️', 116: '🌤️', 119: '☁️', 122: '☁️',
-                    143: '🌫️', 176: '🌦️', 179: '🌨️', 182: '🌨️', 185: '🌨️',
-                    200: '⛈️', 227: '🌨️', 230: '🌨️', 248: '🌫️', 260: '🌫️',
-                    263: '🌦️', 266: '🌦️', 281: '🌧️', 284: '🌧️',
-                    293: '🌧️', 296: '🌧️', 299: '🌧️', 302: '🌧️', 305: '🌧️', 308: '🌧️',
-                    311: '🌧️', 314: '🌧️', 317: '🌨️', 320: '🌨️', 323: '🌨️', 326: '🌨️',
-                    329: '🌨️', 332: '🌨️', 335: '🌨️', 338: '🌨️',
-                    350: '🌧️', 353: '🌦️', 356: '🌧️', 359: '🌧️',
-                    362: '🌨️', 365: '🌨️', 368: '🌨️', 371: '🌨️',
-                    374: '🌨️', 377: '🌨️', 386: '⛈️', 389: '⛈️',
-                    392: '⛈️', 395: '🌨️',
-                };
-                const icon = iconMap[code] || '🌡️';
 
                 iconEl.textContent = icon;
                 tempEl.textContent = temp + '°C';
@@ -671,7 +655,6 @@
                 }));
 
                 scored.sort((a, b) => b.score - a.score);
-
                 const relevant = scored.filter(s => s.score > 0.2);
 
                 if (statusEl) statusEl.textContent = `Найдено ${relevant.length} событий`;
@@ -968,6 +951,10 @@
                 render();
             });
         });
+
+        // Делаем функции доступными для onclick в HTML
+        window.openSidebar = openSidebar;
+        window.closeSidebar = closeSidebar;
 
         load();
         initAI();
