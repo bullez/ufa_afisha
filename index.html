@@ -57,6 +57,51 @@
         
         #count { color: var(--muted); font-size: 0.9rem; font-weight: 500; }
 
+        /* ─── AI-Поиск ─── */
+        .ai-search {
+            background: linear-gradient(135deg, rgba(196, 255, 77, 0.08) 0%, rgba(196, 255, 77, 0.02) 100%);
+            border: 1px solid rgba(196, 255, 77, 0.2);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .ai-search-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .ai-search-header .icon {
+            font-size: 1.4rem;
+        }
+        .ai-search-header h2 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        .ai-search-header .status {
+            font-size: 0.75rem;
+            color: var(--muted);
+            margin-left: auto;
+        }
+        .ai-search input {
+            width: 100%;
+            background: rgba(0,0,0,0.4);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px 18px;
+            color: var(--text);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .ai-search input:focus { border-color: var(--accent); }
+        .ai-search input::placeholder { color: #555; }
+        .ai-search input:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .search-wrap { margin-bottom: 20px; position: relative; }
         .search-wrap input {
             width: 100%;
@@ -137,6 +182,12 @@
             font-weight: 800; font-size: 1rem;
         }
         .card-price.free { color: var(--accent); }
+        .card-score {
+            font-size: 0.75rem;
+            color: var(--accent);
+            margin-top: 6px;
+            font-weight: 600;
+        }
 
         /* ─── Сайдбар на весь экран ─── */
         .overlay {
@@ -167,7 +218,6 @@
             pointer-events: auto;
         }
 
-        /* ─── Двухколоночная раскладка на весь экран ─── */
         .sidebar-inner {
             width: 100%;
             height: 100%;
@@ -175,7 +225,6 @@
             flex-direction: row;
         }
 
-        /* ─── Слева: картинка на всю высоту ─── */
         .card-3d-wrap {
             flex: 0 0 50%;
             display: flex;
@@ -232,7 +281,6 @@
         .sidebar.active .card-3d-hint { opacity: 1; }
         .card-3d-wrap.touched .card-3d-hint { opacity: 0; }
 
-        /* ─── Справа: текст на всю высоту ─── */
         .card-info {
             flex: 1;
             display: flex;
@@ -384,7 +432,6 @@
 
         .empty { text-align: center; padding: 80px 20px; color: var(--muted); grid-column: 1/-1; }
 
-        /* ─── Мобильная адаптация ─── */
         @media (max-width: 800px) {
             .sidebar-inner { flex-direction: column; }
             .card-3d-wrap { flex: 0 0 45%; height: 45vh; padding: 10px; }
@@ -412,8 +459,18 @@
         </div>
     </header>
 
+    <!-- AI-Поиск -->
+    <div class="ai-search">
+        <div class="ai-search-header">
+            <span class="icon">🤖</span>
+            <h2>Спроси меня о событиях</h2>
+            <span class="status" id="ai-status">Загрузка модели...</span>
+        </div>
+        <input type="text" id="ai-query" placeholder="Например: хочу что-то атмосферное и недорогое..." disabled>
+    </div>
+
     <div class="search-wrap">
-        <input type="text" id="search" placeholder="Поиск по событиям...">
+        <input type="text" id="search" placeholder="Поиск по словам...">
     </div>
 
     <div class="filters">
@@ -445,39 +502,138 @@
         </div>
     </aside>
 
-    <script>
+    <!-- Transformers.js для AI-поиска -->
+    <script type="module">
+        import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2';
+        
+        // Отключаем локальные модели, используем CDN
+        env.allowLocalModels = false;
+        
+        let extractor = null;
+        let eventEmbeddings = [];
+        let allEvents = [];
+        let aiReady = false;
+
+        // ─── Инициализация AI-модели ───
+        async function initAI() {
+            const statusEl = document.getElementById('ai-status');
+            const inputEl = document.getElementById('ai-query');
+            
+            try {
+                statusEl.textContent = 'Загрузка модели (33 МБ)...';
+                
+                // Загружаем модель для эмбеддингов (понимает смысл текста)
+                extractor = await pipeline(
+                    'feature-extraction',
+                    'Xenova/all-MiniLM-L6-v2',
+                    { dtype: 'q8' }
+                );
+                
+                statusEl.textContent = 'Готово! Спрашивай.';
+                inputEl.disabled = false;
+                aiReady = true;
+                
+                // Индексируем события
+                await indexEvents();
+            } catch (err) {
+                console.error('AI init error:', err);
+                statusEl.textContent = 'AI недоступен';
+            }
+        }
+
+        // ─── Индексация событий ───
+        async function indexEvents() {
+            if (!extractor || allEvents.length === 0) return;
+            
+            const statusEl = document.getElementById('ai-status');
+            statusEl.textContent = 'Индексация событий...';
+            
+            eventEmbeddings = [];
+            
+            for (const event of allEvents) {
+                const text = `${event.title || ''} ${event.desc || ''} ${event.venue || ''}`.trim();
+                if (!text) {
+                    eventEmbeddings.push(null);
+                    continue;
+                }
+                
+                try {
+                    const output = await extractor(text, { pooling: 'mean', normalize: true });
+                    eventEmbeddings.push(Array.from(output.data));
+                } catch (err) {
+                    console.error('Embedding error:', err);
+                    eventEmbeddings.push(null);
+                }
+            }
+            
+            statusEl.textContent = `Готово! Проиндексировано ${eventEmbeddings.filter(e => e).length} событий.`;
+        }
+
+        // ─── Косинусное сходство ───
+        function cosineSimilarity(a, b) {
+            if (!a || !b) return 0;
+            let dot = 0, normA = 0, normB = 0;
+            for (let i = 0; i < a.length; i++) {
+                dot += a[i] * b[i];
+                normA += a[i] * a[i];
+                normB += b[i] * b[i];
+            }
+            return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+        }
+
+        // ─── AI-поиск ───
+        async function aiSearch(query) {
+            if (!extractor || !query.trim()) {
+                renderAll();
+                return;
+            }
+            
+            const statusEl = document.getElementById('ai-status');
+            statusEl.textContent = 'Ищу...';
+            
+            try {
+                const output = await extractor(query, { pooling: 'mean', normalize: true });
+                const queryEmbedding = Array.from(output.data);
+                
+                // Считаем сходство для каждого события
+                const scored = allEvents.map((event, idx) => ({
+                    event,
+                    score: eventEmbeddings[idx] ? cosineSimilarity(queryEmbedding, eventEmbeddings[idx]) : 0
+                }));
+                
+                // Сортируем по убыванию сходства
+                scored.sort((a, b) => b.score - a.score);
+                
+                // Показываем только релевантные (score > 0.2)
+                const relevant = scored.filter(s => s.score > 0.2);
+                
+                statusEl.textContent = `Найдено ${relevant.length} событий`;
+                renderWithScores(relevant);
+            } catch (err) {
+                console.error('AI search error:', err);
+                statusEl.textContent = 'Ошибка поиска';
+            }
+        }
+
         // ─── Погода Уфы ───
         async function loadWeather() {
             try {
                 const res = await fetch(
-                    'https://api.open-meteo.com/v1/forecast?latitude=54.7388&longitude=55.9721&current=temperature_2m,weather_code,wind_speed_10m&timezone=Asia%2FYekaterinburg'
+                    'https://api.open-meteo.com/v1/forecast?latitude=54.7388&longitude=55.9721&current=temperature_2m,weather_code&timezone=Asia%2FYekaterinburg'
                 );
                 const data = await res.json();
                 const temp = Math.round(data.current.temperature_2m);
                 const code = data.current.weather_code;
                 
                 const weatherMap = {
-                    0: ['☀️', 'Ясно'],
-                    1: ['🌤️', 'Преимущественно ясно'],
-                    2: ['⛅', 'Переменная облачность'],
-                    3: ['☁️', 'Пасмурно'],
-                    45: ['🌫️', 'Туман'],
-                    48: ['🌫️', 'Туман'],
-                    51: ['🌦️', 'Лёгкая морось'],
-                    53: ['🌦️', 'Морось'],
-                    55: ['🌦️', 'Сильная морось'],
-                    61: ['🌧️', 'Небольшой дождь'],
-                    63: ['🌧️', 'Дождь'],
-                    65: ['🌧️', 'Сильный дождь'],
-                    71: ['🌨️', 'Небольшой снег'],
-                    73: ['🌨️', 'Снег'],
-                    75: ['🌨️', 'Сильный снег'],
-                    80: ['🌧️', 'Ливень'],
-                    81: ['🌧️', 'Сильный ливень'],
-                    82: ['🌧️', 'Очень сильный ливень'],
-                    95: ['⛈️', 'Гроза'],
-                    96: ['⛈️', 'Гроза с градом'],
-                    99: ['⛈️', 'Сильная гроза с градом'],
+                    0: ['☀️', 'Ясно'], 1: ['🌤️', 'Преимущественно ясно'],
+                    2: ['⛅', 'Переменная облачность'], 3: ['☁️', 'Пасмурно'],
+                    45: ['🌫️', 'Туман'], 48: ['🌫️', 'Туман'],
+                    51: ['🌦️', 'Лёгкая морось'], 53: ['🌦️', 'Морось'], 55: ['🌦️', 'Сильная морось'],
+                    61: ['🌧️', 'Небольшой дождь'], 63: ['🌧️', 'Дождь'], 65: ['🌧️', 'Сильный дождь'],
+                    71: ['🌨️', 'Небольшой снег'], 73: ['🌨️', 'Снег'], 75: ['🌨️', 'Сильный снег'],
+                    80: ['🌧️', 'Ливень'], 81: ['🌧️', 'Сильный ливень'], 82: ['🌧️', 'Очень сильный ливень'],
+                    95: ['⛈️', 'Гроза'], 96: ['⛈️', 'Гроза с градом'], 99: ['⛈️', 'Сильная гроза с градом'],
                 };
                 const [icon, desc] = weatherMap[code] || ['🌡️', 'Погода'];
                 
@@ -486,14 +642,12 @@
                 document.getElementById('weather-desc').textContent = desc;
             } catch (err) {
                 document.getElementById('weather-desc').textContent = 'Погода недоступна';
-                console.error(err);
             }
         }
         loadWeather();
         setInterval(loadWeather, 30 * 60 * 1000);
 
         // ─── Логика сайта ───
-        let allEvents = [];
         let currentFilter = 'all';
         let searchQuery = '';
 
@@ -503,6 +657,9 @@
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 allEvents = await res.json();
                 render();
+                
+                // После загрузки событий — индексируем для AI
+                if (aiReady) await indexEvents();
             } catch (err) {
                 document.getElementById('feed').innerHTML =
                     '<div class="empty">Ошибка загрузки данных. Проверь events.json.</div>';
@@ -542,6 +699,27 @@
             const div = document.createElement('div');
             div.textContent = s || '';
             return div.innerHTML;
+        }
+
+        function renderCard(e, idx, score) {
+            const img = e.image ? `style="background-image: url('${e.image}')"` : '';
+            const priceClass = (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод') ? 'free' : '';
+            const source = e.source ? `<div class="card-tag">@${e.source}</div>` : '';
+            const scoreHtml = score !== undefined ? `<div class="card-score">Релевантность: ${Math.round(score * 100)}%</div>` : '';
+
+            return `
+                <div class="card" data-index="${idx}" onclick="openSidebar(${idx})">
+                    <div class="card-image" ${img}></div>
+                    <div class="card-body">
+                        ${source}
+                        <h3>${escapeHtml(e.title) || 'Без названия'}</h3>
+                        <div class="card-meta">📅 ${formatDate(e)}</div>
+                        <div class="card-meta">📍 ${escapeHtml(e.venue) || 'Место уточняется'}</div>
+                        <div class="card-price ${priceClass}">${escapeHtml(e.price) || 'Цена уточняется'}</div>
+                        ${scoreHtml}
+                    </div>
+                </div>
+            `;
         }
 
         function render() {
@@ -587,28 +765,30 @@
                 return;
             }
 
-            feed.innerHTML = filtered.map((e, idx) => {
-                const img = e.image ? `style="background-image: url('${e.image}')"` : '';
-                const priceClass = (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод') ? 'free' : '';
-                const source = e.source ? `<div class="card-tag">@${e.source}</div>` : '';
-
-                return `
-                    <div class="card" data-index="${idx}" onclick="openSidebar(${idx})">
-                        <div class="card-image" ${img}></div>
-                        <div class="card-body">
-                            ${source}
-                            <h3>${escapeHtml(e.title) || 'Без названия'}</h3>
-                            <div class="card-meta">📅 ${formatDate(e)}</div>
-                            <div class="card-meta">📍 ${escapeHtml(e.venue) || 'Место уточняется'}</div>
-                            <div class="card-price ${priceClass}">${escapeHtml(e.price) || 'Цена уточняется'}</div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
+            feed.innerHTML = filtered.map((e, idx) => renderCard(e, idx)).join('');
             window.currentFiltered = filtered;
         }
 
+        function renderWithScores(scored) {
+            const feed = document.getElementById('feed');
+            const countEl = document.getElementById('count');
+            
+            countEl.textContent = scored.length + ' событий';
+            
+            if (scored.length === 0) {
+                feed.innerHTML = '<div class="empty">Ничего не найдено по смыслу. Попробуй другой запрос.</div>';
+                return;
+            }
+            
+            feed.innerHTML = scored.map((s, idx) => renderCard(s.event, idx, s.score)).join('');
+            window.currentFiltered = scored.map(s => s.event);
+        }
+
+        function renderAll() {
+            render();
+        }
+
+        // ─── Сайдбар ───
         function openSidebar(index) {
             const e = window.currentFiltered[index];
             if (!e) return;
@@ -629,33 +809,21 @@
             content.innerHTML = `
                 ${tagHtml}
                 <h1 class="card-info-title">${escapeHtml(e.title) || 'Без названия'}</h1>
-
                 <div class="card-info-meta">
                     <div class="card-info-meta-item">
                         <span class="icon">📅</span>
-                        <div>
-                            <div class="label">Дата и время</div>
-                            <div class="value">${formatDate(e)}</div>
-                        </div>
+                        <div><div class="label">Дата и время</div><div class="value">${formatDate(e)}</div></div>
                     </div>
                     <div class="card-info-meta-item">
                         <span class="icon">📍</span>
-                        <div>
-                            <div class="label">Место</div>
-                            <div class="value">${escapeHtml(e.venue) || 'Уточняется'}</div>
-                        </div>
+                        <div><div class="label">Место</div><div class="value">${escapeHtml(e.venue) || 'Уточняется'}</div></div>
                     </div>
                     <div class="card-info-meta-item">
                         <span class="icon">💰</span>
-                        <div>
-                            <div class="label">Цена</div>
-                            <div class="value ${isFree ? 'price-free' : ''}">${escapeHtml(e.price) || 'Уточняется'}</div>
-                        </div>
+                        <div><div class="label">Цена</div><div class="value ${isFree ? 'price-free' : ''}">${escapeHtml(e.price) || 'Уточняется'}</div></div>
                     </div>
                 </div>
-
                 <div class="card-info-text">${escapeHtml(fullText)}</div>
-
                 <div class="card-info-actions">
                     ${e.source_link ? `<a class="card-info-btn primary" href="${e.source_link}" target="_blank" rel="noopener">📱 Открыть в Telegram</a>` : ''}
                     <button class="card-info-btn secondary" onclick="closeSidebar()">Закрыть</button>
@@ -663,7 +831,6 @@
             `;
 
             resetRotation();
-
             document.getElementById('sidebar').classList.add('active');
             document.getElementById('overlay').classList.add('active');
             document.body.style.overflow = 'hidden';
@@ -676,7 +843,7 @@
             resetRotation();
         }
 
-        // ─── 3D-поворот картинки ───
+        // ─── 3D-поворот ───
         const card3d = document.getElementById('card-3d');
         const card3dWrap = document.getElementById('card-3d-wrap');
         let rotX = 0, rotY = 0;
@@ -719,32 +886,30 @@
             applyRotation();
         }
 
-        card3d.addEventListener('mousedown', (e) => {
-            onStart(e.clientX, e.clientY);
-            e.preventDefault();
-        });
+        card3d.addEventListener('mousedown', (e) => { onStart(e.clientX, e.clientY); e.preventDefault(); });
         document.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
         document.addEventListener('mouseup', onEnd);
-
-        card3d.addEventListener('touchstart', (e) => {
-            const t = e.touches[0];
-            onStart(t.clientX, t.clientY);
-        }, { passive: true });
-        card3d.addEventListener('touchmove', (e) => {
-            const t = e.touches[0];
-            onMove(t.clientX, t.clientY);
-        }, { passive: true });
+        card3d.addEventListener('touchstart', (e) => { const t = e.touches[0]; onStart(t.clientX, t.clientY); }, { passive: true });
+        card3d.addEventListener('touchmove', (e) => { const t = e.touches[0]; onMove(t.clientX, t.clientY); }, { passive: true });
         card3d.addEventListener('touchend', onEnd);
 
         document.getElementById('sidebar-close').addEventListener('click', closeSidebar);
         document.getElementById('overlay').addEventListener('click', closeSidebar);
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeSidebar();
-        });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSidebar(); });
 
+        // ─── Поиск ───
         document.getElementById('search').addEventListener('input', (e) => {
             searchQuery = e.target.value;
             render();
+        });
+
+        document.getElementById('ai-query').addEventListener('input', (e) => {
+            const query = e.target.value;
+            if (query.length > 3) {
+                aiSearch(query);
+            } else if (query.length === 0) {
+                renderAll();
+            }
         });
 
         document.querySelectorAll('.filters button').forEach(btn => {
@@ -756,7 +921,9 @@
             });
         });
 
+        // ─── Старт ───
         load();
+        initAI();
     </script>
 </body>
 </html>
