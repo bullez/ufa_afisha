@@ -220,7 +220,7 @@ def harvest_preview(channels: List[str], rules: dict) -> List[Event]:
                     date_text=date_str, time_text=time_str,
                     city=CITY, venue=venue, price=price_from_text(text),
                     source=ch, source_link=link, posted_at=None,
-                    raw=text, image=img, kind="event"
+                    raw=text, image=img, kind=detect_category(text)
                 )
                 out.append(ev)
         except Exception as e:
