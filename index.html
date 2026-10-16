@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Уфа для своих — афиша</title>
     <style>
         :root {
@@ -13,42 +13,75 @@
             --muted: #a3a3a3;
             --accent: #c4ff4d;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
             background: var(--bg);
             color: var(--text);
             line-height: 1.5;
             padding: 20px;
+            padding-bottom: 80px; /* Место под кнопку "Наверх" */
             max-width: 1200px;
             margin: 0 auto;
+            -webkit-font-smoothing: antialiased;
         }
         header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
             border-bottom: 1px solid var(--border);
+            flex-wrap: wrap;
+            gap: 12px;
         }
         h1 { font-size: 2rem; font-weight: 800; letter-spacing: -1px; }
         h1 span { color: var(--accent); }
-        #count { color: var(--muted); font-size: 0.9rem; }
+        #count { color: var(--muted); font-size: 0.9rem; font-weight: 500; }
+
+        /* Поиск */
+        .search-wrap {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        .search-wrap input {
+            width: 100%;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px 18px 14px 44px;
+            color: var(--text);
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .search-wrap input:focus { border-color: var(--accent); }
+        .search-wrap::before {
+            content: '🔍';
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 1rem;
+            opacity: 0.6;
+        }
+
         .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
         .filters button {
-            background: transparent; color: var(--muted);
-            border: 1px solid var(--border); padding: 8px 18px;
+            background: var(--card); color: var(--muted);
+            border: 1px solid var(--border); padding: 10px 20px;
             border-radius: 100px; cursor: pointer; font-size: 0.9rem;
-            transition: all 0.2s;
+            transition: all 0.2s; font-weight: 500;
         }
         .filters button:hover { border-color: var(--accent); color: var(--text); }
         .filters button.active {
             background: var(--accent); color: #000;
-            border-color: var(--accent); font-weight: 600;
+            border-color: var(--accent); font-weight: 700;
         }
+
         .grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px;
         }
         .card {
@@ -56,9 +89,10 @@
             border-radius: 20px; overflow: hidden;
             transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
             display: flex; flex-direction: column;
+            cursor: pointer;
         }
         .card:hover {
-            transform: translateY(-6px);
+            transform: translateY(-4px);
             border-color: var(--accent);
             box-shadow: 0 12px 40px rgba(196, 255, 77, 0.08);
         }
@@ -67,15 +101,31 @@
             background: linear-gradient(135deg, #1a1a1a, #2a2a2a);
             background-size: cover; background-position: center;
             position: relative;
+            transition: filter 0.2s;
         }
-        .card-body { padding: 18px; flex: 1; display: flex; flex-direction: column; }
+        .card-image:hover { filter: brightness(1.1); }
+        .card-image::after {
+            content: '🔍';
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.3);
+            opacity: 0;
+            transition: opacity 0.2s;
+            font-size: 2rem;
+            color: #fff;
+        }
+        .card-image:hover::after { opacity: 1; }
+        .card-body { padding: 16px; flex: 1; display: flex; flex-direction: column; }
         .card-tag {
             display: inline-block; font-size: 0.7rem; text-transform: uppercase;
             letter-spacing: 1px; color: var(--accent);
             margin-bottom: 8px; font-weight: 700;
         }
         .card h3 {
-            font-size: 1.05rem; margin-bottom: 12px;
+            font-size: 1.05rem; margin-bottom: 10px;
             line-height: 1.35; font-weight: 700;
             display: -webkit-box; -webkit-line-clamp: 3;
             -webkit-box-orient: vertical; overflow: hidden;
@@ -85,21 +135,98 @@
             margin-bottom: 5px; display: flex; align-items: center; gap: 6px;
         }
         .card-price {
-            margin-top: auto; padding-top: 14px;
+            margin-top: auto; padding-top: 12px;
             font-weight: 800; font-size: 1rem;
         }
         .card-price.free { color: var(--accent); }
         .card-link {
-            display: inline-block; margin-top: 12px;
+            display: inline-block; margin-top: 10px;
             font-size: 0.85rem; color: var(--accent);
             text-decoration: none; font-weight: 700;
             transition: opacity 0.2s;
         }
         .card-link:hover { opacity: 0.7; }
+
+        /* Лайтбокс */
+        .lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.95);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.2s ease;
+        }
+        .lightbox.active { display: flex; }
+        .lightbox img {
+            max-width: 95%;
+            max-height: 95%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            animation: zoomIn 0.25s ease;
+        }
+        .lightbox-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            font-size: 2rem;
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+            line-height: 1;
+        }
+        .lightbox-close:hover { background: rgba(255,255,255,0.2); }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        /* Кнопка "Наверх" */
+        .to-top {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            font-size: 1.4rem;
+            cursor: pointer;
+            box-shadow: 0 8px 24px rgba(196, 255, 77, 0.3);
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+            pointer-events: none;
+            z-index: 100;
+            font-weight: 700;
+        }
+        .to-top.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: auto;
+        }
+        .to-top:hover { transform: translateY(-4px); }
+
         .empty { text-align: center; padding: 80px 20px; color: var(--muted); grid-column: 1/-1; }
+
         @media (max-width: 600px) {
             h1 { font-size: 1.5rem; }
             .grid { grid-template-columns: 1fr; }
+            .filters button { padding: 8px 14px; font-size: 0.85rem; }
+            .to-top { bottom: 16px; right: 16px; width: 44px; height: 44px; }
         }
     </style>
 </head>
@@ -108,6 +235,10 @@
         <h1>Уфа <span>для своих</span></h1>
         <div id="count"></div>
     </header>
+
+    <div class="search-wrap">
+        <input type="text" id="search" placeholder="Поиск по событиям...">
+    </div>
 
     <div class="filters">
         <button data-filter="all" class="active">Все</button>
@@ -120,9 +251,19 @@
 
     <div id="feed" class="grid"></div>
 
+    <!-- Лайтбокс -->
+    <div id="lightbox" class="lightbox">
+        <button class="lightbox-close" id="lightbox-close">×</button>
+        <img id="lightbox-img" src="" alt="">
+    </div>
+
+    <!-- Кнопка "Наверх" -->
+    <button class="to-top" id="to-top" title="Наверх">↑</button>
+
     <script>
         let allEvents = [];
         let currentFilter = 'all';
+        let searchQuery = '';
 
         async function load() {
             try {
@@ -153,31 +294,59 @@
             return e.date_text === `${dd}.${mm}.${yyyy}`;
         }
 
+        // Сортировка: сначала с датой (по возрастанию), потом без даты
+        function sortEvents(events) {
+            return [...events].sort((a, b) => {
+                const aHasDate = !!a.date_text;
+                const bHasDate = !!b.date_text;
+                if (aHasDate && bHasDate) {
+                    return a.date_text.localeCompare(b.date_text);
+                }
+                if (aHasDate) return -1;
+                if (bHasDate) return 1;
+                return 0;
+            });
+        }
+
         function render() {
             const feed = document.getElementById('feed');
             const countEl = document.getElementById('count');
 
             let filtered = allEvents;
+
+            // Фильтр по категории
             if (currentFilter === 'free') {
-                filtered = allEvents.filter(e => (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод'));
+                filtered = filtered.filter(e => (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод'));
             } else if (currentFilter === 'party') {
-                filtered = allEvents.filter(e => {
+                filtered = filtered.filter(e => {
                     const t = ((e.title || '') + ' ' + (e.desc || '')).toLowerCase();
                     return t.includes('вечерин') || t.includes('party') || t.includes('тусов') || t.includes('рейв');
                 });
             } else if (currentFilter === 'music') {
-                filtered = allEvents.filter(e => {
+                filtered = filtered.filter(e => {
                     const t = ((e.title || '') + ' ' + (e.desc || '')).toLowerCase();
                     return t.includes('концерт') || t.includes('музык') || t.includes('джаз') || t.includes('dj');
                 });
             } else if (currentFilter === 'art') {
-                filtered = allEvents.filter(e => {
+                filtered = filtered.filter(e => {
                     const t = ((e.title || '') + ' ' + (e.desc || '')).toLowerCase();
                     return t.includes('выстав') || t.includes('арт') || t.includes('галере') || t.includes('музей');
                 });
             } else if (currentFilter === 'today') {
-                filtered = allEvents.filter(isToday);
+                filtered = filtered.filter(isToday);
             }
+
+            // Поиск
+            if (searchQuery) {
+                const q = searchQuery.toLowerCase();
+                filtered = filtered.filter(e => {
+                    const text = ((e.title || '') + ' ' + (e.desc || '') + ' ' + (e.venue || '')).toLowerCase();
+                    return text.includes(q);
+                });
+            }
+
+            // Сортировка
+            filtered = sortEvents(filtered);
 
             countEl.textContent = filtered.length + ' событий';
 
@@ -186,14 +355,14 @@
                 return;
             }
 
-            feed.innerHTML = filtered.map(e => {
+            feed.innerHTML = filtered.map((e, idx) => {
                 const img = e.image ? `style="background-image: url('${e.image}')"` : '';
                 const priceClass = (e.price || '').toLowerCase().includes('бесплат') || (e.price || '').toLowerCase().includes('свобод') ? 'free' : '';
-                const link = e.source_link ? `<a class="card-link" href="${e.source_link}" target="_blank" rel="noopener">Открыть пост →</a>` : '';
+                const link = e.source_link ? `<a class="card-link" href="${e.source_link}" target="_blank" rel="noopener" onclick="event.stopPropagation()">Открыть пост →</a>` : '';
                 const source = e.source ? `<div class="card-tag">@${e.source}</div>` : '';
 
                 return `
-                    <div class="card">
+                    <div class="card" data-index="${idx}" onclick="openLightbox(${idx})">
                         <div class="card-image" ${img}></div>
                         <div class="card-body">
                             ${source}
@@ -206,8 +375,56 @@
                     </div>
                 `;
             }).join('');
+
+            // Сохраняем отфильтрованные события для лайтбокса
+            window.currentFiltered = filtered;
         }
 
+        // Лайтбокс
+        function openLightbox(index) {
+            const event = window.currentFiltered[index];
+            if (!event || !event.image) return;
+            const lb = document.getElementById('lightbox');
+            const img = document.getElementById('lightbox-img');
+            img.src = event.image;
+            lb.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeLightbox() {
+            const lb = document.getElementById('lightbox');
+            lb.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+        document.getElementById('lightbox').addEventListener('click', (e) => {
+            if (e.target.id === 'lightbox') closeLightbox();
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeLightbox();
+        });
+
+        // Кнопка "Наверх"
+        const toTop = document.getElementById('to-top');
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 400) {
+                toTop.classList.add('visible');
+            } else {
+                toTop.classList.remove('visible');
+            }
+        });
+        toTop.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Поиск
+        document.getElementById('search').addEventListener('input', (e) => {
+            searchQuery = e.target.value;
+            render();
+        });
+
+        // Фильтры
         document.querySelectorAll('.filters button').forEach(btn => {
             btn.addEventListener('click', () => {
                 document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
