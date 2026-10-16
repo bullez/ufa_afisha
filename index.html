@@ -38,7 +38,7 @@
         }
         h1 { font-size: 2rem; font-weight: 800; letter-spacing: -1px; }
         h1 span { color: var(--accent); }
-        
+
         /* ─── Погода Уфы ─── */
         #weather {
             display: flex;
@@ -49,12 +49,13 @@
             border-radius: 14px;
             padding: 10px 18px;
             font-size: 0.95rem;
+            min-width: 180px;
         }
         #weather .weather-icon { font-size: 1.8rem; line-height: 1; }
         #weather .weather-info { display: flex; flex-direction: column; }
         #weather .weather-temp { font-size: 1.2rem; font-weight: 800; color: var(--accent); }
         #weather .weather-desc { font-size: 0.8rem; color: var(--muted); }
-        
+
         #count { color: var(--muted); font-size: 0.9rem; font-weight: 500; }
 
         /* ─── AI-Поиск ─── */
@@ -71,9 +72,7 @@
             gap: 10px;
             margin-bottom: 12px;
         }
-        .ai-search-header .icon {
-            font-size: 1.4rem;
-        }
+        .ai-search-header .icon { font-size: 1.4rem; }
         .ai-search-header h2 {
             font-size: 1rem;
             font-weight: 700;
@@ -97,10 +96,7 @@
         }
         .ai-search input:focus { border-color: var(--accent); }
         .ai-search input::placeholder { color: #555; }
-        .ai-search input:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+        .ai-search input:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .search-wrap { margin-bottom: 20px; position: relative; }
         .search-wrap input {
@@ -440,7 +436,7 @@
             .card-info-title { font-size: 1.3rem; }
             .card-info-scroll { padding: 20px; }
             h1 { font-size: 1.5rem; }
-            #weather { padding: 8px 14px; font-size: 0.85rem; }
+            #weather { padding: 8px 14px; font-size: 0.85rem; min-width: auto; }
             #weather .weather-icon { font-size: 1.5rem; }
             .grid { grid-template-columns: 1fr; }
             .filters button { padding: 8px 14px; font-size: 0.85rem; }
@@ -505,126 +501,31 @@
     <!-- Transformers.js для AI-поиска -->
     <script type="module">
         import { pipeline, env } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.0.2';
-        
-        // Отключаем локальные модели, используем CDN
+
         env.allowLocalModels = false;
-        
+
         let extractor = null;
         let eventEmbeddings = [];
         let allEvents = [];
         let aiReady = false;
 
-        // ─── Инициализация AI-модели ───
-        async function initAI() {
-            const statusEl = document.getElementById('ai-status');
-            const inputEl = document.getElementById('ai-query');
-            
-            try {
-                statusEl.textContent = 'Загрузка модели (33 МБ)...';
-                
-                // Загружаем модель для эмбеддингов (понимает смысл текста)
-                extractor = await pipeline(
-                    'feature-extraction',
-                    'Xenova/all-MiniLM-L6-v2',
-                    { dtype: 'q8' }
-                );
-                
-                statusEl.textContent = 'Готово! Спрашивай.';
-                inputEl.disabled = false;
-                aiReady = true;
-                
-                // Индексируем события
-                await indexEvents();
-            } catch (err) {
-                console.error('AI init error:', err);
-                statusEl.textContent = 'AI недоступен';
-            }
-        }
-
-        // ─── Индексация событий ───
-        async function indexEvents() {
-            if (!extractor || allEvents.length === 0) return;
-            
-            const statusEl = document.getElementById('ai-status');
-            statusEl.textContent = 'Индексация событий...';
-            
-            eventEmbeddings = [];
-            
-            for (const event of allEvents) {
-                const text = `${event.title || ''} ${event.desc || ''} ${event.venue || ''}`.trim();
-                if (!text) {
-                    eventEmbeddings.push(null);
-                    continue;
-                }
-                
-                try {
-                    const output = await extractor(text, { pooling: 'mean', normalize: true });
-                    eventEmbeddings.push(Array.from(output.data));
-                } catch (err) {
-                    console.error('Embedding error:', err);
-                    eventEmbeddings.push(null);
-                }
-            }
-            
-            statusEl.textContent = `Готово! Проиндексировано ${eventEmbeddings.filter(e => e).length} событий.`;
-        }
-
-        // ─── Косинусное сходство ───
-        function cosineSimilarity(a, b) {
-            if (!a || !b) return 0;
-            let dot = 0, normA = 0, normB = 0;
-            for (let i = 0; i < a.length; i++) {
-                dot += a[i] * b[i];
-                normA += a[i] * a[i];
-                normB += b[i] * b[i];
-            }
-            return dot / (Math.sqrt(normA) * Math.sqrt(normB));
-        }
-
-        // ─── AI-поиск ───
-        async function aiSearch(query) {
-            if (!extractor || !query.trim()) {
-                renderAll();
-                return;
-            }
-            
-            const statusEl = document.getElementById('ai-status');
-            statusEl.textContent = 'Ищу...';
-            
-            try {
-                const output = await extractor(query, { pooling: 'mean', normalize: true });
-                const queryEmbedding = Array.from(output.data);
-                
-                // Считаем сходство для каждого события
-                const scored = allEvents.map((event, idx) => ({
-                    event,
-                    score: eventEmbeddings[idx] ? cosineSimilarity(queryEmbedding, eventEmbeddings[idx]) : 0
-                }));
-                
-                // Сортируем по убыванию сходства
-                scored.sort((a, b) => b.score - a.score);
-                
-                // Показываем только релевантные (score > 0.2)
-                const relevant = scored.filter(s => s.score > 0.2);
-                
-                statusEl.textContent = `Найдено ${relevant.length} событий`;
-                renderWithScores(relevant);
-            } catch (err) {
-                console.error('AI search error:', err);
-                statusEl.textContent = 'Ошибка поиска';
-            }
-        }
-
-        // ─── Погода Уфы ───
+        // ─── Погода Уфы (Open-Meteo + wttr.in резерв) ───
         async function loadWeather() {
+            const tempEl = document.getElementById('weather-temp');
+            const descEl = document.getElementById('weather-desc');
+            const iconEl = document.getElementById('weather-icon');
+
+            // Пробуем Open-Meteo
             try {
                 const res = await fetch(
-                    'https://api.open-meteo.com/v1/forecast?latitude=54.7388&longitude=55.9721&current=temperature_2m,weather_code&timezone=Asia%2FYekaterinburg'
+                    'https://api.open-meteo.com/v1/forecast?latitude=54.7388&longitude=55.9721&current=temperature_2m,weather_code&timezone=Asia%2FYekaterinburg',
+                    { signal: AbortSignal.timeout(5000) }
                 );
+                if (!res.ok) throw new Error('HTTP ' + res.status);
                 const data = await res.json();
                 const temp = Math.round(data.current.temperature_2m);
                 const code = data.current.weather_code;
-                
+
                 const weatherMap = {
                     0: ['☀️', 'Ясно'], 1: ['🌤️', 'Преимущественно ясно'],
                     2: ['⛅', 'Переменная облачность'], 3: ['☁️', 'Пасмурно'],
@@ -636,16 +537,147 @@
                     95: ['⛈️', 'Гроза'], 96: ['⛈️', 'Гроза с градом'], 99: ['⛈️', 'Сильная гроза с градом'],
                 };
                 const [icon, desc] = weatherMap[code] || ['🌡️', 'Погода'];
-                
-                document.getElementById('weather-icon').textContent = icon;
-                document.getElementById('weather-temp').textContent = temp + '°C';
-                document.getElementById('weather-desc').textContent = desc;
+
+                iconEl.textContent = icon;
+                tempEl.textContent = temp + '°C';
+                descEl.textContent = desc;
+                return;
             } catch (err) {
-                document.getElementById('weather-desc').textContent = 'Погода недоступна';
+                console.warn('Open-Meteo failed, trying wttr.in...', err);
+            }
+
+            // Резерв: wttr.in
+            try {
+                const res = await fetch(
+                    'https://wttr.in/Ufa?format=j1',
+                    { signal: AbortSignal.timeout(5000) }
+                );
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                const current = data.current_condition[0];
+                const temp = current.temp_C;
+                const desc = current.lang_ru ? current.lang_ru[0].value : current.weatherDesc[0].value;
+
+                const code = parseInt(current.weatherCode);
+                const iconMap = {
+                    113: '☀️', 116: '🌤️', 119: '☁️', 122: '☁️',
+                    143: '🌫️', 176: '🌦️', 179: '🌨️', 182: '🌨️', 185: '🌨️',
+                    200: '⛈️', 227: '🌨️', 230: '🌨️', 248: '🌫️', 260: '🌫️',
+                    263: '🌦️', 266: '🌦️', 281: '🌧️', 284: '🌧️',
+                    293: '🌧️', 296: '🌧️', 299: '🌧️', 302: '🌧️', 305: '🌧️', 308: '🌧️',
+                    311: '🌧️', 314: '🌧️', 317: '🌨️', 320: '🌨️', 323: '🌨️', 326: '🌨️',
+                    329: '🌨️', 332: '🌨️', 335: '🌨️', 338: '🌨️',
+                    350: '🌧️', 353: '🌦️', 356: '🌧️', 359: '🌧️',
+                    362: '🌨️', 365: '🌨️', 368: '🌨️', 371: '🌨️',
+                    374: '🌨️', 377: '🌨️', 386: '⛈️', 389: '⛈️',
+                    392: '⛈️', 395: '🌨️',
+                };
+                const icon = iconMap[code] || '🌡️';
+
+                iconEl.textContent = icon;
+                tempEl.textContent = temp + '°C';
+                descEl.textContent = desc;
+            } catch (err) {
+                console.error('Both weather APIs failed:', err);
+                tempEl.textContent = '—';
+                descEl.textContent = 'Погода недоступна';
             }
         }
         loadWeather();
         setInterval(loadWeather, 30 * 60 * 1000);
+
+        // ─── AI-модель ───
+        async function initAI() {
+            const statusEl = document.getElementById('ai-status');
+            const inputEl = document.getElementById('ai-query');
+
+            try {
+                statusEl.textContent = 'Загрузка модели (33 МБ)...';
+
+                extractor = await pipeline(
+                    'feature-extraction',
+                    'Xenova/all-MiniLM-L6-v2',
+                    { dtype: 'q8' }
+                );
+
+                statusEl.textContent = 'Готово! Спрашивай.';
+                inputEl.disabled = false;
+                aiReady = true;
+
+                await indexEvents();
+            } catch (err) {
+                console.error('AI init error:', err);
+                statusEl.textContent = 'AI недоступен';
+            }
+        }
+
+        async function indexEvents() {
+            if (!extractor || allEvents.length === 0) return;
+
+            const statusEl = document.getElementById('ai-status');
+            statusEl.textContent = 'Индексация событий...';
+
+            eventEmbeddings = [];
+
+            for (const event of allEvents) {
+                const text = `${event.title || ''} ${event.desc || ''} ${event.venue || ''}`.trim();
+                if (!text) {
+                    eventEmbeddings.push(null);
+                    continue;
+                }
+
+                try {
+                    const output = await extractor(text, { pooling: 'mean', normalize: true });
+                    eventEmbeddings.push(Array.from(output.data));
+                } catch (err) {
+                    console.error('Embedding error:', err);
+                    eventEmbeddings.push(null);
+                }
+            }
+
+            statusEl.textContent = `Готово! Проиндексировано ${eventEmbeddings.filter(e => e).length} событий.`;
+        }
+
+        function cosineSimilarity(a, b) {
+            if (!a || !b) return 0;
+            let dot = 0, normA = 0, normB = 0;
+            for (let i = 0; i < a.length; i++) {
+                dot += a[i] * b[i];
+                normA += a[i] * a[i];
+                normB += b[i] * b[i];
+            }
+            return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+        }
+
+        async function aiSearch(query) {
+            if (!extractor || !query.trim()) {
+                renderAll();
+                return;
+            }
+
+            const statusEl = document.getElementById('ai-status');
+            statusEl.textContent = 'Ищу...';
+
+            try {
+                const output = await extractor(query, { pooling: 'mean', normalize: true });
+                const queryEmbedding = Array.from(output.data);
+
+                const scored = allEvents.map((event, idx) => ({
+                    event,
+                    score: eventEmbeddings[idx] ? cosineSimilarity(queryEmbedding, eventEmbeddings[idx]) : 0
+                }));
+
+                scored.sort((a, b) => b.score - a.score);
+
+                const relevant = scored.filter(s => s.score > 0.2);
+
+                statusEl.textContent = `Найдено ${relevant.length} событий`;
+                renderWithScores(relevant);
+            } catch (err) {
+                console.error('AI search error:', err);
+                statusEl.textContent = 'Ошибка поиска';
+            }
+        }
 
         // ─── Логика сайта ───
         let currentFilter = 'all';
@@ -657,8 +689,7 @@
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 allEvents = await res.json();
                 render();
-                
-                // После загрузки событий — индексируем для AI
+
                 if (aiReady) await indexEvents();
             } catch (err) {
                 document.getElementById('feed').innerHTML =
@@ -772,14 +803,14 @@
         function renderWithScores(scored) {
             const feed = document.getElementById('feed');
             const countEl = document.getElementById('count');
-            
+
             countEl.textContent = scored.length + ' событий';
-            
+
             if (scored.length === 0) {
                 feed.innerHTML = '<div class="empty">Ничего не найдено по смыслу. Попробуй другой запрос.</div>';
                 return;
             }
-            
+
             feed.innerHTML = scored.map((s, idx) => renderCard(s.event, idx, s.score)).join('');
             window.currentFiltered = scored.map(s => s.event);
         }
@@ -788,7 +819,6 @@
             render();
         }
 
-        // ─── Сайдбар ───
         function openSidebar(index) {
             const e = window.currentFiltered[index];
             if (!e) return;
@@ -843,7 +873,6 @@
             resetRotation();
         }
 
-        // ─── 3D-поворот ───
         const card3d = document.getElementById('card-3d');
         const card3dWrap = document.getElementById('card-3d-wrap');
         let rotX = 0, rotY = 0;
@@ -897,7 +926,6 @@
         document.getElementById('overlay').addEventListener('click', closeSidebar);
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeSidebar(); });
 
-        // ─── Поиск ───
         document.getElementById('search').addEventListener('input', (e) => {
             searchQuery = e.target.value;
             render();
@@ -921,7 +949,6 @@
             });
         });
 
-        // ─── Старт ───
         load();
         initAI();
     </script>
