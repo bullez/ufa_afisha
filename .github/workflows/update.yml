@@ -32,11 +32,21 @@ jobs:
       - name: Run fetch script
         run: python fetch_events.py
 
-      - name: Commit and push if changed
+      - name: Commit changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add -A
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-update events and cleanup")
-          git pull --rebase origin main
-          git push
+          git diff --quiet && git diff --staged --quiet || git commit -m "Auto-update events"
+
+      - name: Push with rebase and auto-resolve conflicts
+        run: |
+          # Пробуем забрать свежие изменения
+          git pull --rebase origin main || {
+            echo "Конфликт при rebase. Разрешаем в пользу наших данных (events.json)."
+            # Наши events.json всегда свежие, поэтому берём их версию
+            git checkout --theirs events.json data/events.json 2>/dev/null || git checkout --ours events.json data/events.json 2>/dev/null || true
+            git add -A
+            GIT_EDITOR=true git rebase --continue || git rebase --skip || git rebase --abort
+          }
+          git push origin main
