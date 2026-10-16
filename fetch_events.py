@@ -3,7 +3,7 @@
 Ufa Afisha — финальная версия
 - Сбор из t.me/s/ (безопасно, без API)
 - Фильтрация через rules.json
-- Скачивание картинок локально (не блокируются)
+- Скачивание картинок локально
 - Парсинг дат, мест, цен
 - Сохранение в data/events.json и events.json
 """
@@ -13,14 +13,10 @@ from dataclasses import dataclass, asdict
 from typing import List, Optional, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
-from urllib.parse import urlparse
 
 import pytz, requests
 from bs4 import BeautifulSoup
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Конфиг
-# ─────────────────────────────────────────────────────────────────────────────
 CITY = "Уфа"
 TZ = pytz.timezone("Asia/Yekaterinburg")
 FRESH_DAYS = int(os.getenv("FRESH_DAYS", "90"))
@@ -60,16 +56,12 @@ MONTHS = {
     "сен":9,"сентября":9,"окт":10,"октября":10,"ноя":11,"ноября":11,"дек":12,"декабря":12
 }
 
-# Известные места Уфы (для извлечения)
 VENUE_HINTS = [
     "Арт-Квадрат", "Арт Квадрат", "Zaman", "Мирас", "Клуб Мечты", "Мама варит кофе",
     "Стерх", "Джаз-клуб", "Бар Муви", "Movie", "Vinoteka", "Даско", "Огни Уфы",
     "Гостиный двор", "Конгресс-холл", "Торатау", "Башкирия", "Neft", "Мира",
 ]
 
-# ─────────────────────────────────────────────────────────────────────────────
-# rules.json
-# ─────────────────────────────────────────────────────────────────────────────
 def load_rules() -> dict:
     path = Path("rules.json")
     if path.exists():
@@ -85,9 +77,6 @@ def clean_title(title: str, rules: dict) -> str:
         title = re.sub(rf"^{re.escape(prefix)}\s*[:,—-]?\s*", "", title, flags=re.I)
     return title.strip()
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Модель
-# ─────────────────────────────────────────────────────────────────────────────
 @dataclass
 class Event:
     title: str
@@ -105,9 +94,6 @@ class Event:
     image: Optional[str] = None
     kind: str = "event"
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Утилиты
-# ─────────────────────────────────────────────────────────────────────────────
 def norm(s: str) -> str:
     return re.sub(r"\s+", " ", (s or "").replace("\xa0", " ")).strip()
 
@@ -122,22 +108,15 @@ def _smart_cut(s: str, limit: int = 90) -> str:
     return s.rstrip(" ,—:;.") + "…"
 
 def extract_datetime(text: str) -> Tuple[Optional[datetime], Optional[str], Optional[str]]:
-    """Парсит дату и время. Понимает '16.10', '16 октября', 'сегодня', 'завтра', 'в субботу'."""
     t = (text or "").lower()
     now = datetime.now(TZ)
     dt = None; date_str = None
 
-    # Относительные даты
-    rel_map = {
-        "сегодня": 0, "завтра": 1, "послезавтра": 2,
-        "в субботу": None, "в воскресенье": None, "в пятницу": None,
-    }
     if "сегодня" in t:
         dt = now; date_str = now.strftime("%d.%m.%Y")
     elif "завтра" in t:
         dt = now + timedelta(days=1); date_str = dt.strftime("%d.%m.%Y")
 
-    # Абсолютные даты: 16.10 или 16/10/2026
     if not dt:
         m = re.search(r"\b(\d{1,2})[./-](\d{1,2})(?:[./-](\d{2,4}))?\b", t)
         if m:
@@ -149,7 +128,6 @@ def extract_datetime(text: str) -> Tuple[Optional[datetime], Optional[str], Opti
                 date_str = f"{d:02d}.{mo:02d}.{y}"
             except: pass
 
-    # Абсолютные даты: 16 октября
     if not dt:
         m2 = re.search(r"\b(\d{1,2})\s+([а-яё]+)\b", t, flags=re.I)
         if m2 and m2.group(2) in MONTHS:
@@ -160,7 +138,6 @@ def extract_datetime(text: str) -> Tuple[Optional[datetime], Optional[str], Opti
                 date_str = f"{d:02d}.{mo:02d}.{y}"
             except: pass
 
-    # Время
     time_str = None
     tm = re.search(r"\b([01]?\d|2[0-3])[:.](\d{2})\b", t)
     if tm:
@@ -171,11 +148,9 @@ def extract_datetime(text: str) -> Tuple[Optional[datetime], Optional[str], Opti
     return dt, date_str, time_str
 
 def extract_venue(text: str) -> Optional[str]:
-    """Ищет известные места в тексте."""
     for venue in VENUE_HINTS:
         if re.search(rf"\b{re.escape(venue)}\b", text, re.I):
             return venue
-    # Ищем паттерн «в клубе X», «в баре X», «в галерее X»
     m = re.search(r"\b(?:в|на)\s+(?:клубе|баре|галерее|музее|театре|центре|пространстве)\s+[«\"]?([А-ЯЁA-Z][^»\".,\n]{2,40})", text)
     if m:
         return m.group(1).strip()
@@ -212,15 +187,12 @@ def price_from_text(text: str) -> Optional[str]:
     return None
 
 def download_image(url: str, channel: str) -> Optional[str]:
-    """Скачивает картинку локально, возвращает относительный путь."""
     try:
         r = requests.get(url, headers=HEADERS, timeout=30)
         r.raise_for_status()
-        # Определяем расширение
         ext = ".jpg"
         for e in (".png", ".webp", ".jpeg", ".jpg"):
             if e in url.lower(): ext = e; break
-        # Уникальное имя по хешу URL
         h = hashlib.md5(url.encode()).hexdigest()[:10]
         fname = f"{channel}_{h}{ext}"
         path = IMAGES_DIR / fname
@@ -230,9 +202,6 @@ def download_image(url: str, channel: str) -> Optional[str]:
         logging.warning(f"Image download failed: {e}")
         return None
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Сбор с t.me/s/
-# ─────────────────────────────────────────────────────────────────────────────
 def harvest_preview(channels: List[str], rules: dict) -> List[Event]:
     out: List[Event] = []
     for ch in channels:
@@ -255,7 +224,6 @@ def harvest_preview(channels: List[str], rules: dict) -> List[Event]:
                 link_node = it.select_one("a.tgme_widget_message_date")
                 link = link_node.get("href") if link_node else f"https://t.me/{ch}"
 
-                # Картинка — качаем локально
                 img = None
                 ph = it.select_one("a.tgme_widget_message_photo_wrap") or it.select_one("a.tgme_widget_message_video_thumb")
                 if ph and ph.has_attr("style"):
@@ -263,7 +231,6 @@ def harvest_preview(channels: List[str], rules: dict) -> List[Event]:
                     if mm:
                         img = download_image(mm.group(1), ch)
 
-                # Классификация — только события
                 low = text.lower()
                 if not (EVENT_RE.search(low) or re.search(DATE_TOKENS, low) or re.search(TIME_TOKENS, low)):
                     continue
@@ -296,9 +263,6 @@ def dedupe(events: List[Event]) -> List[Event]:
         seen.add(key); out.append(e)
     return out
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Сохранение
-# ─────────────────────────────────────────────────────────────────────────────
 def save_outputs(events: List[Event]):
     DATA_DIR.mkdir(exist_ok=True)
     payload = [asdict(e) for e in events]
@@ -306,9 +270,6 @@ def save_outputs(events: List[Event]):
     Path("events.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), "utf-8")
     logging.info(f"Saved {len(events)} events → data/events.json и events.json")
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Запуск
-# ─────────────────────────────────────────────────────────────────────────────
 def run_once():
     logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
     rules = load_rules()
