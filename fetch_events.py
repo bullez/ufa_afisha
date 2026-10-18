@@ -29,7 +29,7 @@ LLM_MAX_POSTS = int(os.environ.get("LLM_MAX_POSTS") or 40)  # лимит LLM-з�
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL") or ""
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_KEY") or ""
-OPENROUTER_KEY = os.environ.get("OPENROUTER_API_KEY") or ""
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY") or ""
 LLM_BASE_URL = os.environ.get("LLM_BASE_URL") or "https://openrouter.ai/api/v1"
 LLM_MODEL = os.environ.get("LLM_MODEL") or "deepseek/deepseek-chat-v3.1:free"
 
@@ -38,12 +38,10 @@ if SUPABASE_URL and SUPABASE_KEY:
     try:
         from supabase import create_client
         sb = create_client(SUPABASE_URL, SUPABASE_KEY)
+        logging.info("Supabase: подключено")
     except Exception as e:
-        try:
-            logging.warning(f"LLM extract failed: {e} | url={r.url} | ответ: {r.text[:200]}")
-        except Exception:
-            logging.warning(f"LLM extract failed: {e}")
-        return None
+        logging.warning(f"Supabase init failed: {e}")
+        sb = None
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
