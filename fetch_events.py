@@ -150,7 +150,7 @@ def fetch_with_retry(url: str, retries: int = 3, timeout: int = 20) -> requests.
 # ───────────────────────── LLM-экстракция ─────────────────────────
 def llm_extract(text: str, today: str) -> Optional[dict]:
     """Отправляет пост в LLM, получает структурированный JSON."""
-    if not OPENROUTER_KEY:
+    if not OPENROUTER_API_KEY:
         return None
     try:
         r = requests.post(
@@ -640,7 +640,7 @@ def run_once():
     if not channels:
         logging.error("channels.json пуст или не найден")
         return
-    mode = f"LLM: {'ON' if OPENROUTER_KEY else 'off'} | DB: {'ON' if sb else 'off (локально)'}"
+    mode = f"LLM: {'ON' if OPENROUTER_API_KEY else 'off'} | DB: {'ON' if sb else 'off (локально)'}"
     logging.info(f"Старт. Каналов: {len(channels)}. {mode}")
     items = harvest_preview(channels, rules)
     logging.info(f"Raw events: {len(items)}")
