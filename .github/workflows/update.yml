@@ -32,6 +32,15 @@ jobs:
       - name: Run fetch script
         run: python fetch_events.py
 
+      - name: Validate data
+        run: |
+          python -c "
+          import json, sys
+          n = len(json.load(open('events.json')))
+          print(f'events: {n}')
+          sys.exit(1 if n < 5 else 0)
+          "
+
       - name: Commit changes
         run: |
           git config --global user.name "github-actions[bot]"
