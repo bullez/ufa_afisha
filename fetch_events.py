@@ -1,14 +1,20 @@
 # -*- coding: utf-8 -*-
 """
-Ufa Afisha — с фильтром прошедших событий и строгим отбором анонсов
-"""
+Ufa Afisha — сборщик анонсов из Telegram-каналов.
 
-import os, re, json, logging, hashlib
-from dataclasses import dataclass, asdict
+v2 — исправления:
+  1. Мердж с существующим events.json: будущие события больше не теряются,
+     если выпали из окна последних 100 постов канала.
+  2. Перекатывание года: «1 января», спарсенное в декабре, = следующий год.
+  3. is_past учитывает время события, а не только дату.
+  4. Корректный pytz: TZ.localize() вместо tzinfo=TZ.
+  5. Ретраи с backoff + пауза между каналами (меньше риск 429 от t.me).
+"""
+import os, re, json, time, logging, hashlib
+from dataclasses import dataclass, asdict, fields
 from typing import List, Optional, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
-
 import pytz, requests
 from bs4 import BeautifulSoup
 
@@ -18,11 +24,13 @@ DATA_DIR = Path("data")
 IMAGES_DIR = DATA_DIR / "images"
 IMAGES_DIR.mkdir(parents=True, exist_ok=True)
 
+ROLLOVER_DAYS = 14      # если дата "ушла" в прошлое дальше N дней — это следующий год
+CHANNEL_PAUSE = 1.5     # пауза между запросами к t.me (сек)
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                   "(KHTML, like Gecko) Chrome/124 Safari/537.36"
 }
-
 EVENT_KEYWORDS = [
     "кино","фильм","кинопоказ","концерт","джаз","оркестр","джем","dj","вечеринк","рейв",
     "лектор","лекци","семинар","мастер-класс","воркшоп","театр","спектакл","перформанс",
@@ -30,7 +38,6 @@ EVENT_KEYWORDS = [
     "квиз","премьера","открытие","тренинг"
 ]
 EVENT_RE = re.compile("|".join(EVENT_KEYWORDS), re.I)
-
 CATEGORIES = {
     "concert": ["концерт","джаз","оркестр","джем","dj","выступлен","группа","певец","певица","бэнд"],
     "party": ["вечеринк","рейв","дискотек","пати","afterparty","афтепати"],
@@ -43,16 +50,13 @@ CATEGORIES = {
     "standup": ["стендап","комик","юмор"],
     "quiz": ["квиз","викторин","интеллектуальн"]
 }
-
 DATE_TOKENS = r"(?:\b\d{1,2}[./-]\d{1,2}(?:[./-]\d{2,4})?|\b\d{1,2}\s+(?:янв|фев|мар|апр|мая|июн|июл|авг|сен|окт|ноя|дек|января|февраля|марта|апреля|июня|июля|августа|сентября|октября|ноября|декабря)\b)"
 TIME_TOKENS = r"(?:\b[01]?\d|2[0-3])[:.]\d{2}"
-
 MONTHS = {
     "янв":1,"января":1,"фев":2,"февраля":2,"мар":3,"марта":3,"апр":4,"апреля":4,
     "мая":5,"май":5,"июн":6,"июня":6,"июл":7,"июля":7,"авг":8,"августа":8,
     "сен":9,"сентября":9,"окт":10,"октября":10,"ноя":11,"ноября":11,"дек":12,"декабря":12
 }
-
 VENUE_HINTS = [
     "Арт-Квадрат", "Арт Квадрат", "Арт-КВАДРАТ", "Zaman", "Мирас", "Клуб Мечты",
     "Мама варит кофе", "Стерх", "Джаз-клуб", "Бар Муви", "Movie", "Vinoteka", "Даско",
@@ -62,7 +66,6 @@ VENUE_HINTS = [
     "Биатлонка", "Соты", "Тинькофф", "Сбер", "Амадеус", "Гастробар", "Лофт",
     "Кэмп", "Camp", "Кэмп", "Monkey Grinder", "Шкапских", "Мира", "Монумент",
 ]
-
 # Посты, которые НЕ являются анонсами (даже если есть ключевые слова)
 NON_EVENT_MARKERS = [
     "реклама", "erid", "ооо", "инн", "подпишись", "подписывайтесь",
@@ -127,6 +130,20 @@ class Event:
     image: Optional[str] = None
     kind: str = "other"
     category: str = "other"
+    first_seen: Optional[str] = None   # ИСПРАВЛЕНО (1): когда событие впервые попало в афишу
+
+EVENT_FIELDS = {f.name for f in fields(Event)}
+
+def dict_to_event(e: dict) -> Optional[Event]:
+    """Безопасное преобразование старой JSON-записи в Event."""
+    if not isinstance(e, dict):
+        return None
+    if not e.get("title") or not e.get("source_link"):
+        return None
+    try:
+        return Event(**{k: e.get(k) for k in EVENT_FIELDS})
+    except TypeError:
+        return None
 
 def norm(s: str) -> str:
     return re.sub(r"\s+", " ", (s or "").replace("\xa0", " ")).strip()
@@ -145,7 +162,6 @@ def extract_datetime(text: str) -> Tuple[Optional[datetime], Optional[str], Opti
     t = (text or "").lower()
     now = datetime.now(TZ)
     dt = None; date_str = None
-
     if "сегодня" in t:
         dt = now; date_str = now.strftime("%d.%m.%Y")
     elif "завтра" in t:
@@ -164,18 +180,21 @@ def extract_datetime(text: str) -> Tuple[Optional[datetime], Optional[str], Opti
         days_ahead = (6 - now.weekday()) % 7
         if days_ahead == 0: days_ahead = 7
         dt = now + timedelta(days=days_ahead); date_str = dt.strftime("%d.%m.%Y")
-
     if not dt:
         m = re.search(r"\b(\d{1,2})[./-](\d{1,2})(?:[./-](\d{2,4}))?\b", t)
         if m:
             d, mo, y = int(m.group(1)), int(m.group(2)), m.group(3)
+            year_explicit = y is not None          # год указан в посте явно
             y = int(y) if y else now.year
             if y < 100: y += 2000
             try:
                 dt = TZ.localize(datetime(y, mo, d))
-                date_str = f"{d:02d}.{mo:02d}.{y}"
-            except: pass
-
+                # ИСПРАВЛЕНО (2): перекатывание года для дат без явного года
+                if not year_explicit and dt < now - timedelta(days=ROLLOVER_DAYS):
+                    dt = TZ.localize(datetime(y + 1, mo, d))
+                date_str = dt.strftime("%d.%m.%Y")
+            except ValueError:
+                pass
     if not dt:
         m2 = re.search(r"\b(\d{1,2})\s+([а-яё]+)\b", t, flags=re.I)
         if m2 and m2.group(2) in MONTHS:
@@ -183,37 +202,36 @@ def extract_datetime(text: str) -> Tuple[Optional[datetime], Optional[str], Opti
             y = now.year
             try:
                 dt = TZ.localize(datetime(y, mo, d))
-                date_str = f"{d:02d}.{mo:02d}.{y}"
-            except: pass
-
+                # ИСПРАВЛЕНО (2): перекатывание года («1 января» в декабре)
+                if dt < now - timedelta(days=ROLLOVER_DAYS):
+                    dt = TZ.localize(datetime(y + 1, mo, d))
+                date_str = dt.strftime("%d.%m.%Y")
+            except ValueError:
+                pass
     time_str = None
     tm = re.search(r"\b([01]?\d|2[0-3])[:.](\d{2})\b", t)
     if tm:
         hh, mm = int(tm.group(1)), int(tm.group(2))
         time_str = f"{hh:02d}:{mm:02d}"
         if dt: dt = dt.replace(hour=hh, minute=mm)
-
     return dt, date_str, time_str
 
 def extract_venue(text: str, rules: dict) -> Optional[str]:
     for venue in VENUE_HINTS:
         if re.search(rf"\b{re.escape(venue)}\b", text, re.I):
             return normalize_venue(venue, rules)
-
     m = re.search(
         r"\b(?:в|на)\s+(?:клуб[еи]|бар[еи]|галере[еи]|музе[еи]|театр[еи]|центр[еи]|пространств[еи]|площадк[еи]|арен[еи]|холл[еи])\s+[«\"]?([А-ЯЁA-Z][^»\".,\n]{2,40})",
         text
     )
     if m:
         return normalize_venue(m.group(1).strip().strip('«»"\''), rules)
-
     m = re.search(
         r"\b(?:ул\.|улица|пр\.|проспект|пер\.|переулок|шоссе|бульвар)\s+[А-ЯЁA-Z][^,.\n]{2,40}(?:,\s*\d+[А-Яа-я]?)?",
         text
     )
     if m:
         return m.group(0).strip()
-
     return None
 
 def title_from_text(text: str) -> str:
@@ -238,13 +256,11 @@ def make_desc(text: str) -> str:
 
 def price_from_text(text: str) -> Optional[str]:
     low = (text or "").lower()
-
     if any(x in low for x in [
         "вход свобод", "вход бесплат", "бесплатно", "free",
         "по донату", "donation", "0₽", "0 ₽", "0 руб"
     ]):
         return "Вход свободный"
-
     m = re.search(r"(?:стоимость|вход|билет[ыа]?|цена)\s*[:\-—]?\s*([^\n.,;]{2,40})", low)
     if m:
         val = m.group(1).strip()
@@ -255,25 +271,38 @@ def price_from_text(text: str) -> Optional[str]:
             return "Вход свободный"
         if len(val) <= 40 and not val.startswith("http"):
             return val.capitalize()
-
     m = re.search(r"\b(\d{2,6})\s*[-–]\s*(\d{2,6})\s*(?:₽|р|руб)\b", low)
     if m:
         return f"{m.group(1)}–{m.group(2)} ₽"
-
     m = re.search(r"\bот\s*(\d{2,6})\s*(?:₽|р|руб)\b", low)
     if m:
         return f"от {m.group(1)} ₽"
-
     m = re.search(r"\b(\d{2,6})\s*(?:₽|р|руб)\b", low)
     if m:
         return f"{m.group(1)} ₽"
-
     return None
+
+def fetch_with_retry(url: str, retries: int = 3, timeout: int = 20) -> requests.Response:
+    """ИСПРАВЛЕНО (5): повторные попытки с backoff при 429/сетевых ошибках."""
+    last_exc = None
+    for attempt in range(retries):
+        try:
+            r = requests.get(url, headers=HEADERS, timeout=timeout)
+            if r.status_code in (429, 502, 503):
+                wait = 5 * (attempt + 1)
+                logging.warning(f"HTTP {r.status_code} от {url}, ждём {wait}с")
+                time.sleep(wait)
+                continue
+            r.raise_for_status()
+            return r
+        except requests.RequestException as e:
+            last_exc = e
+            time.sleep(3 * (attempt + 1))
+    raise last_exc if last_exc else RuntimeError(f"fetch failed: {url}")
 
 def download_image(url: str, channel: str) -> Optional[str]:
     try:
-        r = requests.get(url, headers=HEADERS, timeout=15)
-        r.raise_for_status()
+        r = fetch_with_retry(url, retries=2, timeout=15)
         ext = ".jpg"
         for e in (".png", ".webp", ".jpeg", ".jpg"):
             if e in url.lower(): ext = e; break
@@ -286,18 +315,21 @@ def download_image(url: str, channel: str) -> Optional[str]:
         logging.warning(f"Image download failed: {e}")
         return None
 
-def is_past(date_text: Optional[str]) -> bool:
-    """True, если дата уже прошла."""
+def is_past(date_text: Optional[str], time_text: Optional[str] = None) -> bool:
+    """ИСПРАВЛЕНО (3)+(4): учитываем время события и корректный pytz.localize."""
     if not date_text:
         return False
     try:
         parts = date_text.split(".")
         if len(parts) == 3:
             d, m, y = int(parts[0]), int(parts[1]), int(parts[2])
-            event_date = datetime(y, m, d, tzinfo=TZ)
-            today = datetime.now(TZ).replace(hour=0, minute=0, second=0, microsecond=0)
-            return event_date < today
-    except Exception:
+            hh, mm = 23, 59  # нет времени — считаем, что событие идёт до конца дня
+            if time_text and ":" in time_text:
+                pp = time_text.split(":")
+                hh, mm = int(pp[0]), int(pp[1])
+            event_dt = TZ.localize(datetime(y, m, d, hh, mm))
+            return event_dt < datetime.now(TZ)
+    except (ValueError, TypeError):
         pass
     return False
 
@@ -307,8 +339,7 @@ def harvest_preview(channels: List[str], rules: dict) -> List[Event]:
         count = 0
         try:
             url = f"https://t.me/s/{ch}"
-            r = requests.get(url, headers=HEADERS, timeout=20)
-            r.raise_for_status()
+            r = fetch_with_retry(url)
             soup = BeautifulSoup(r.text, "html.parser")
             items = soup.select("div.tgme_widget_message_wrap")
             for it in items[:100]:
@@ -316,41 +347,32 @@ def harvest_preview(channels: List[str], rules: dict) -> List[Event]:
                 text = norm(tnode.get_text("\n", strip=True) if tnode else "")
                 if not text or should_exclude(text, rules):
                     continue
-
                 dt, date_str, time_str = extract_datetime(text)
-
-                # ─── ФИЛЬТР 1: пропускаем прошедшие события ───
-                if is_past(date_str):
+                # ─── ФИЛЬТР 1: пропускаем прошедшие события (с учётом времени) ───
+                if is_past(date_str, time_str):
                     continue
-
-                # ─── ФИЛЬТР 2: должен быть либо ключевое слово + дата/время ───
+                # ─── ФИЛЬТР 2: должно быть ключевое слово + дата/время ───
                 low = text.lower()
                 has_event_kw = bool(EVENT_RE.search(low))
                 has_date = bool(re.search(DATE_TOKENS, low))
                 has_time = bool(re.search(TIME_TOKENS, low))
-
-                # Пропускаем, если нет ключевого слова или нет даты/времени
                 if not has_event_kw:
                     continue
                 if not (has_date or has_time):
                     continue
-
                 link_node = it.select_one("a.tgme_widget_message_date")
                 link = link_node.get("href") if link_node else f"https://t.me/{ch}"
-
                 img = None
                 ph = it.select_one("a.tgme_widget_message_photo_wrap") or it.select_one("a.tgme_widget_message_video_thumb")
                 if ph and ph.has_attr("style"):
                     mm = re.search(r"url\(['\"]?(.*?)['\"]?\)", ph["style"])
                     if mm:
                         img = download_image(mm.group(1), ch)
-
                 title = clean_title(title_from_text(text), rules)
                 desc = make_desc(text)
                 price = price_from_text(text)
                 venue = extract_venue(text, rules)
                 category = detect_category(text)
-
                 ev = Event(
                     title=title, desc=desc,
                     start=dt.isoformat() if dt else None,
@@ -361,17 +383,46 @@ def harvest_preview(channels: List[str], rules: dict) -> List[Event]:
                     kind=category, category=category
                 )
                 out.append(ev); count += 1
-
             logging.info(f"{ch}: +{count} items")
         except Exception as e:
             logging.warning(f"Preview failed for {ch}: {e}")
+        finally:
+            # ИСПРАВЛЕНО (5): пауза между каналами — меньше риск получить 429
+            time.sleep(CHANNEL_PAUSE)
     return out
+
+def merge_with_existing(new_events: List[Event], path: str = "events.json") -> List[Event]:
+    """ИСПРАВЛЕНО (1): держим будущие события из прошлого запуска,
+    даже если они выпали из окна последних 100 постов."""
+    old = load_json_file(path, [])
+    if not isinstance(old, list) or not old:
+        for ev in new_events:
+            ev.first_seen = datetime.now(TZ).isoformat()
+        return new_events
+    fresh_links = {ev.source_link for ev in new_events}
+    now_iso = datetime.now(TZ).isoformat()
+    kept: List[Event] = []
+    for raw_e in old:
+        ev = dict_to_event(raw_e)
+        if ev is None:
+            continue
+        if ev.source_link in fresh_links:   # свежая версия поста уже собрана — берём её
+            continue
+        if is_past(ev.date_text, ev.time_text):  # прошло — выбрасываем
+            continue
+        if not ev.first_seen:
+            ev.first_seen = raw_e.get("first_seen") or now_iso
+        kept.append(ev)
+    for ev in new_events:
+        ev.first_seen = now_iso
+    logging.info(f"Merged: kept {len(kept)} old future events, {len(new_events)} fresh")
+    return new_events + kept   # новые первыми: при дедупе свежие данные выигрывают
 
 def smart_deduplicate(events: List[Event]) -> List[Event]:
     unique_events = {}
     for ev in events:
         fingerprint = (
-            re.sub(r'[^\w\s]', '', ev.title.lower())[:40],
+            re.sub(r'[^\w\s]', '', (ev.title or "").lower())[:40],
             ev.date_text or "",
             ev.venue or "unknown"
         )
@@ -405,18 +456,19 @@ def run_once():
     logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
     channels = load_json_file("channels.json", [])
     rules = load_json_file("rules.json", {"hard_exclude_words": [], "title_prefixes_remove": [], "venue_synonyms": {}})
-
     if not channels:
         logging.error("channels.json пуст или не найден")
         return
-
     logging.info(f"Harvest. Channels: {len(channels)}")
     items = harvest_preview(channels, rules)
     logging.info(f"Raw events: {len(items)}")
     items = smart_deduplicate(items)
     logging.info(f"After dedupe: {len(items)}")
-    cleanup_unused_images(items)
-    save_outputs(items)
+    merged = merge_with_existing(items)
+    merged = smart_deduplicate(merged)  # финальная дедупликация: старое + новое
+    logging.info(f"After merge: {len(merged)} events total")
+    cleanup_unused_images(merged)
+    save_outputs(merged)
 
 if __name__ == "__main__":
     run_once()
