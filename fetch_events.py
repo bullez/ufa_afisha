@@ -7,6 +7,7 @@ Ufa Afisha v3 — сбор из Telegram + LLM-экстракция + Supabase.
   - Только Supabase -> регэкспы + база
   - Нет ключей      -> как раньше: регэкспы + локальный events.json
 """
+from __future__ import annotations
 import os, re, json, time, hashlib, logging
 from dataclasses import dataclass, asdict, fields
 from datetime import datetime, timedelta
