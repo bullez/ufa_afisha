@@ -156,7 +156,7 @@ def llm_extract(text: str, today: str) -> Optional[dict]:
         r = requests.post(
             f"{LLM_BASE_URL}/chat/completions",
             headers={
-                "Authorization": f"Bearer {OPENROUTER_KEY}",
+                "Authorization": f"Bearer {OPENROUTER_API_KEY}",
                 "Content-Type": "application/json",
             },
             json={
