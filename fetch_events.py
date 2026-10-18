@@ -39,7 +39,11 @@ if SUPABASE_URL and SUPABASE_KEY:
         from supabase import create_client
         sb = create_client(SUPABASE_URL, SUPABASE_KEY)
     except Exception as e:
-        logging.warning(f"Supabase не подключился: {e}")
+        try:
+            logging.warning(f"LLM extract failed: {e} | url={r.url} | ответ: {r.text[:200]}")
+        except Exception:
+            logging.warning(f"LLM extract failed: {e}")
+        return None
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
